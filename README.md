@@ -10,7 +10,6 @@ Early work in progress. Free and open source. Donations welcome (link coming).
 
 ## Docs
 - [Interactive mockups](docs/README.md)
-- [Manual](docs/MANUAL.md)
 - [Roadmap](ROADMAP.md)
 
 ## License
