@@ -5,6 +5,7 @@
 Controller plugin for the Novation UltraNova and MiniNova on Linux.
 
 ## Docs
+- [MIDI implementation](docs/MIDI-IMPLEMENTATION.md): CC and NRPN maps.
 - [Manual (draft)](docs/MANUAL.md): waveform drag and double-click, mixer, shared controls.
 
 ## Status
