@@ -9,7 +9,7 @@ Controller plugin for the Novation UltraNova and MiniNova on Linux.
 - [Manual (draft)](docs/MANUAL.md): waveform drag and double-click, mixer, shared controls.
 
 ## Status
-**Plugin skeleton, v0.1. No release yet.** A MIDI controller plugin (VST3 and standalone) that sends and receives the CC messages listed in [map/params.csv](map/params.csv).
+**Early build v0.1 (pre-release on the Releases page).** A MIDI controller plugin (VST3 and standalone) that sends and receives the CC messages listed in [map/params.csv](map/params.csv).
 
 - 107 parameters, taken from: Novation UltraNova (MIDI assignments list). Only the CC list is in the map. The NRPN list (hundreds of entries in ranges) is not imported yet.
 - **None are tested on the real device yet.** The map only holds what the source above lists; ranges the manual does not print are assumed to be 0 to 127 and are marked that way in the plugin.
