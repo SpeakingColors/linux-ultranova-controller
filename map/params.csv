@@ -1,0 +1,108 @@
+id,group,name,kind,a,b,min,max,def,range_src,hw
+cc_64,CC map,Sustain pedal,cc,64,0,0,127,0,assumed,0
+cc_1,CC map,Mod wheel,cc,1,0,0,127,0,assumed,0
+cc_65,CC map,Filter1 Drive Type,cc,65,0,0,127,0,assumed,0
+cc_2,CC map,Breath,cc,2,0,0,127,0,assumed,0
+cc_66,CC map,Sostenuto,cc,66,0,0,127,0,assumed,0
+cc_3,CC map,Polyphony Mode,cc,3,0,0,127,0,assumed,0
+cc_67,CC map,Soft pedal,cc,67,0,0,127,0,assumed,0
+cc_4,CC map,Foot controller,cc,4,0,0,127,0,assumed,0
+cc_68,CC map,Filter1 Type,cc,68,0,0,127,0,assumed,0
+cc_5,CC map,Portamento Rate,cc,5,0,0,127,0,assumed,0
+cc_69,CC map,Filter1 Track,cc,69,0,0,127,0,assumed,0
+cc_70,CC map,AmpEnv Sustain Level,cc,70,0,0,127,0,assumed,0
+cc_7,CC map,Channel volume,cc,7,0,0,127,0,assumed,0
+cc_71,CC map,Filter1 Resonance,cc,71,0,0,127,0,assumed,0
+cc_8,CC map,Dry:Wet Balance,cc,8,0,0,127,0,assumed,0
+cc_72,CC map,AmpEnv Release,cc,72,0,0,127,0,assumed,0
+cc_9,CC map,Pre-Glide,cc,9,0,0,127,0,assumed,0
+cc_73,CC map,AmpEnv Attack,cc,73,0,0,127,0,assumed,0
+cc_10,CC map,Pan Position,cc,10,0,0,127,0,assumed,0
+cc_74,CC map,Filter1 Frequency,cc,74,0,0,127,0,assumed,0
+cc_11,CC map,Expression,cc,11,0,0,127,0,assumed,0
+cc_75,CC map,AmpEnv Decay,cc,75,0,0,127,0,assumed,0
+cc_12,CC map,Portamento expo/linear,cc,12,0,0,127,0,assumed,0
+cc_76,CC map,Easy Vibrato Rate,cc,76,0,0,127,0,assumed,0
+cc_13,CC map,Keyboard Octave Offset,cc,13,0,0,127,0,assumed,0
+cc_77,CC map,Easy Vibrato Depth,cc,77,0,0,127,0,assumed,0
+cc_14,CC map,Unison Count,cc,14,0,0,127,0,assumed,0
+cc_78,CC map,Filter1 Q-normalise,cc,78,0,0,127,0,assumed,0
+cc_15,CC map,Unison Detune,cc,15,0,0,127,0,assumed,0
+cc_79,CC map,FiltEnv > Filter1 Freq,cc,79,0,0,127,0,assumed,0
+cc_16,CC map,Osc123 Drift,cc,16,0,0,127,0,assumed,0
+cc_80,CC map,Filter2 Drive,cc,80,0,0,127,0,assumed,0
+cc_17,CC map,Osc123 Start Phase,cc,17,0,0,127,0,assumed,0
+cc_81,CC map,Filter2 Drive Type,cc,81,0,0,127,0,assumed,0
+cc_18,CC map,Osc123 Fixed Note,cc,18,0,0,127,0,assumed,0
+cc_82,CC map,Filter2 Type,cc,82,0,0,127,0,assumed,0
+cc_19,CC map,Osc1 Waveform/WT/Audio,cc,19,0,0,127,0,assumed,0
+cc_83,CC map,Filter2 Frequency,cc,83,0,0,127,0,assumed,0
+cc_20,CC map,Osc1 Wavetable Interpolate,cc,20,0,0,127,0,assumed,0
+cc_84,CC map,Filter2 Track,cc,84,0,0,127,0,assumed,0
+cc_21,CC map,Osc1 Pulsewidth/WT index,cc,21,0,0,127,0,assumed,0
+cc_85,CC map,Filter2 Resonance,cc,85,0,0,127,0,assumed,0
+cc_22,CC map,Osc1 Sync Depth,cc,22,0,0,127,0,assumed,0
+cc_86,CC map,Filter2 Q-normalise,cc,86,0,0,127,0,assumed,0
+cc_23,CC map,Osc1 Hardness,cc,23,0,0,127,0,assumed,0
+cc_87,CC map,FiltEnv > Filter2 Freq,cc,87,0,0,127,0,assumed,0
+cc_24,CC map,Osc1 Density,cc,24,0,0,127,0,assumed,0
+cc_88,CC map,Pan Mod Rate,cc,88,0,0,127,0,assumed,0
+cc_25,CC map,Osc1 Density Detune,cc,25,0,0,127,0,assumed,0
+cc_89,CC map,Pan Mod Rate Sync,cc,89,0,0,127,0,assumed,0
+cc_26,CC map,Osc1 Semitone Offset,cc,26,0,0,127,0,assumed,0
+cc_90,CC map,Pan Mod Depth,cc,90,0,0,127,0,assumed,0
+cc_27,CC map,Osc1 Cents Offset,cc,27,0,0,127,0,assumed,0
+cc_91,CC map,FxSlot1 Level,cc,91,0,0,127,0,assumed,0
+cc_28,CC map,Osc1 Bendwheel > Pitch,cc,28,0,0,127,0,assumed,0
+cc_92,CC map,FxSlot2 Level,cc,92,0,0,127,0,assumed,0
+cc_29,CC map,Osc2 Waveform/WT/Audio,cc,29,0,0,127,0,assumed,0
+cc_93,CC map,FxSlot3 Level,cc,93,0,0,127,0,assumed,0
+cc_30,CC map,Osc2 Wavetable Interpolate,cc,30,0,0,127,0,assumed,0
+cc_94,CC map,FxSlot4 Level,cc,94,0,0,127,0,assumed,0
+cc_31,CC map,Osc2 Pulsewidth/WT index,cc,31,0,0,127,0,assumed,0
+cc_95,CC map,FxSlot5 Level,cc,95,0,0,127,0,assumed,0
+cc_33,CC map,Osc2 Sync Depth,cc,33,0,0,127,0,assumed,0
+cc_34,CC map,Osc2 Hardness,cc,34,0,0,127,0,assumed,0
+cc_35,CC map,Osc2 Density,cc,35,0,0,127,0,assumed,0
+cc_102,CC map,Pan L/R Phase Offset,cc,102,0,0,127,0,assumed,0
+cc_36,CC map,Osc2 Density Detune,cc,36,0,0,127,0,assumed,0
+cc_103,CC map,L/R Width Enhance,cc,103,0,0,127,0,assumed,0
+cc_37,CC map,Osc2 Semitone Offset,cc,37,0,0,127,0,assumed,0
+cc_104,CC map,Pan Spare,cc,104,0,0,127,0,assumed,0
+cc_105,CC map,Env Packed Mono/Multi Triggers,cc,105,0,0,127,0,assumed,0
+cc_39,CC map,Osc2 Cents Offset,cc,39,0,0,127,0,assumed,0
+cc_106,CC map,Env Level Track Centre,cc,106,0,0,127,0,assumed,0
+cc_40,CC map,Osc2 Bendwheel > Pitch,cc,40,0,0,127,0,assumed,0
+cc_107,CC map,Drum Time,cc,107,0,0,127,0,assumed,0
+cc_41,CC map,Osc3 Waveform/WT/Audio,cc,41,0,0,127,0,assumed,0
+cc_108,CC map,AmpEnv Velocity,cc,108,0,0,127,0,assumed,0
+cc_42,CC map,Osc3 Wavetable Interpolate,cc,42,0,0,127,0,assumed,0
+cc_109,CC map,AmpEnv Sustain Rate,cc,109,0,0,127,0,assumed,0
+cc_43,CC map,Osc3 Pulsewidth/WT index,cc,43,0,0,127,0,assumed,0
+cc_110,CC map,AmpEnv Sustain Time,cc,110,0,0,127,0,assumed,0
+cc_44,CC map,Osc3 Sync Depth,cc,44,0,0,127,0,assumed,0
+cc_111,CC map,AmpEnv A/D Repeats,cc,111,0,0,127,0,assumed,0
+cc_45,CC map,Osc3 Hardness,cc,45,0,0,127,0,assumed,0
+cc_112,CC map,AmpEnv Attack Track,cc,112,0,0,127,0,assumed,0
+cc_46,CC map,Osc3 Density,cc,46,0,0,127,0,assumed,0
+cc_113,CC map,AmpEnv Decay Track,cc,113,0,0,127,0,assumed,0
+cc_47,CC map,Osc3 Density Detune,cc,47,0,0,127,0,assumed,0
+cc_114,CC map,AmpEnv Level Track,cc,114,0,0,127,0,assumed,0
+cc_48,CC map,Osc3 Semitone Offset,cc,48,0,0,127,0,assumed,0
+cc_115,CC map,AmpEnv Attack Slope,cc,115,0,0,127,0,assumed,0
+cc_49,CC map,Osc3 Cents Offset,cc,49,0,0,127,0,assumed,0
+cc_116,CC map,AmpEnv Decay Slope,cc,116,0,0,127,0,assumed,0
+cc_50,CC map,Osc3 Bendwheel > Pitch,cc,50,0,0,127,0,assumed,0
+cc_117,CC map,AmpEnv Touch Trigger,cc,117,0,0,127,0,assumed,0
+cc_51,CC map,Osc1 Mix Level,cc,51,0,0,127,0,assumed,0
+cc_52,CC map,Osc2 Mix Level,cc,52,0,0,127,0,assumed,0
+cc_53,CC map,Osc3 Mix Level,cc,53,0,0,127,0,assumed,0
+cc_54,CC map,Osc13 Ringmod Mix Level,cc,54,0,0,127,0,assumed,0
+cc_55,CC map,Osc23 Ringmod Mix Level,cc,55,0,0,127,0,assumed,0
+cc_56,CC map,Noise Mix Level,cc,56,0,0,127,0,assumed,0
+cc_57,CC map,Noise Type,cc,57,0,0,127,0,assumed,0
+cc_59,CC map,Post-FX Level,cc,59,0,0,127,0,assumed,0
+cc_60,CC map,Filter Configuration,cc,60,0,0,127,0,assumed,0
+cc_61,CC map,Filter Balance,cc,61,0,0,127,0,assumed,0
+cc_62,CC map,Filter Packed Data,cc,62,0,0,127,0,assumed,0
+cc_63,CC map,Filter1 Drive,cc,63,0,0,127,0,assumed,0
