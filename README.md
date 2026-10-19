@@ -9,7 +9,7 @@ Controller plugin for the Novation UltraNova and MiniNova on Linux.
 - [Manual (draft)](docs/MANUAL.md): waveform drag and double-click, mixer, shared controls.
 
 ## Status
-Early work in progress. Free and open source. Donations welcome (link coming).
+Early work in progress. Free and open source. Donations welcome: https://ko-fi.com/studio87
 
 ## Docs
 - [Interactive mockups](docs/README.md)
