@@ -106,3 +106,378 @@ cc_60,CC map,Filter Configuration,cc,60,0,0,127,0,assumed,0
 cc_61,CC map,Filter Balance,cc,61,0,0,127,0,assumed,0
 cc_62,CC map,Filter Packed Data,cc,62,0,0,127,0,assumed,0
 cc_63,CC map,Filter1 Drive,cc,63,0,0,127,0,assumed,0
+nrpn_0_0,Filter envelope,FiltEnv Velocity,nrpn,0,0,0,127,0,assumed,0
+nrpn_0_1,Filter envelope,FiltEnv Attack,nrpn,0,1,0,127,0,assumed,0
+nrpn_0_2,Filter envelope,FiltEnv Decay,nrpn,0,2,0,127,0,assumed,0
+nrpn_0_3,Filter envelope,FiltEnv Sustain Level,nrpn,0,3,0,127,0,assumed,0
+nrpn_0_4,Filter envelope,FiltEnv Release,nrpn,0,4,0,127,0,assumed,0
+nrpn_0_5,Filter envelope,FiltEnv Sustain Rate,nrpn,0,5,0,127,0,assumed,0
+nrpn_0_6,Filter envelope,FiltEnv Sustain Time,nrpn,0,6,0,127,0,assumed,0
+nrpn_0_7,Filter envelope,FiltEnv A/D Repeats,nrpn,0,7,0,127,0,assumed,0
+nrpn_0_8,Filter envelope,FiltEnv Attack Track,nrpn,0,8,0,127,0,assumed,0
+nrpn_0_9,Filter envelope,FiltEnv Decay Track,nrpn,0,9,0,127,0,assumed,0
+nrpn_0_10,Filter envelope,FiltEnv Level Track,nrpn,0,10,0,127,0,assumed,0
+nrpn_0_11,Filter envelope,FiltEnv Attack Slope,nrpn,0,11,0,127,0,assumed,0
+nrpn_0_12,Filter envelope,FiltEnv Decay Slope,nrpn,0,12,0,127,0,assumed,0
+nrpn_0_13,Filter envelope,FiltEnv Touch Trigger,nrpn,0,13,0,127,0,assumed,0
+nrpn_0_14,Env 3,Env3 Delay,nrpn,0,14,0,127,0,assumed,0
+nrpn_0_15,Env 3,Env3 Attack,nrpn,0,15,0,127,0,assumed,0
+nrpn_0_16,Env 3,Env3 Decay,nrpn,0,16,0,127,0,assumed,0
+nrpn_0_17,Env 3,Env3 Sustain Level,nrpn,0,17,0,127,0,assumed,0
+nrpn_0_18,Env 3,Env3 Release,nrpn,0,18,0,127,0,assumed,0
+nrpn_0_19,Env 3,Env3 Sustain Rate,nrpn,0,19,0,127,0,assumed,0
+nrpn_0_20,Env 3,Env3 Sustain Time,nrpn,0,20,0,127,0,assumed,0
+nrpn_0_21,Env 3,Env3 A/D Repeats,nrpn,0,21,0,127,0,assumed,0
+nrpn_0_22,Env 3,Env3 Attack Track,nrpn,0,22,0,127,0,assumed,0
+nrpn_0_23,Env 3,Env3 Decay Track,nrpn,0,23,0,127,0,assumed,0
+nrpn_0_24,Env 3,Env3 Level Track,nrpn,0,24,0,127,0,assumed,0
+nrpn_0_25,Env 3,Env3 Attack Slope,nrpn,0,25,0,127,0,assumed,0
+nrpn_0_26,Env 3,Env3 Decay Slope,nrpn,0,26,0,127,0,assumed,0
+nrpn_0_27,Env 3,Env3 Touch Trigger,nrpn,0,27,0,127,0,assumed,0
+nrpn_0_28,Env 4,Env4 Delay,nrpn,0,28,0,127,0,assumed,0
+nrpn_0_29,Env 4,Env4 Attack,nrpn,0,29,0,127,0,assumed,0
+nrpn_0_30,Env 4,Env4 Decay,nrpn,0,30,0,127,0,assumed,0
+nrpn_0_31,Env 4,Env4 Sustain Level,nrpn,0,31,0,127,0,assumed,0
+nrpn_0_32,Env 4,Env4 Release,nrpn,0,32,0,127,0,assumed,0
+nrpn_0_33,Env 4,Env4 Sustain Rate,nrpn,0,33,0,127,0,assumed,0
+nrpn_0_34,Env 4,Env4 Sustain Time,nrpn,0,34,0,127,0,assumed,0
+nrpn_0_35,Env 4,Env4 A/D Repeats,nrpn,0,35,0,127,0,assumed,0
+nrpn_0_36,Env 4,Env4 Attack Track,nrpn,0,36,0,127,0,assumed,0
+nrpn_0_37,Env 4,Env4 Decay Track,nrpn,0,37,0,127,0,assumed,0
+nrpn_0_38,Env 4,Env4 Level Track,nrpn,0,38,0,127,0,assumed,0
+nrpn_0_39,Env 4,Env4 Attack Slope,nrpn,0,39,0,127,0,assumed,0
+nrpn_0_40,Env 4,Env4 Decay Slope,nrpn,0,40,0,127,0,assumed,0
+nrpn_0_41,Env 4,Env4 Touch Trigger,nrpn,0,41,0,127,0,assumed,0
+nrpn_0_42,Env 5,Env5 Delay,nrpn,0,42,0,127,0,assumed,0
+nrpn_0_43,Env 5,Env5 Attack,nrpn,0,43,0,127,0,assumed,0
+nrpn_0_44,Env 5,Env5 Decay,nrpn,0,44,0,127,0,assumed,0
+nrpn_0_45,Env 5,Env5 Sustain Level,nrpn,0,45,0,127,0,assumed,0
+nrpn_0_46,Env 5,Env5 Release,nrpn,0,46,0,127,0,assumed,0
+nrpn_0_47,Env 5,Env5 Sustain Rate,nrpn,0,47,0,127,0,assumed,0
+nrpn_0_48,Env 5,Env5 Sustain Time,nrpn,0,48,0,127,0,assumed,0
+nrpn_0_49,Env 5,Env5 A/D Repeats,nrpn,0,49,0,127,0,assumed,0
+nrpn_0_50,Env 5,Env5 Attack Track,nrpn,0,50,0,127,0,assumed,0
+nrpn_0_51,Env 5,Env5 Decay Track,nrpn,0,51,0,127,0,assumed,0
+nrpn_0_52,Env 5,Env5 Level Track,nrpn,0,52,0,127,0,assumed,0
+nrpn_0_53,Env 5,Env5 Attack Slope,nrpn,0,53,0,127,0,assumed,0
+nrpn_0_54,Env 5,Env5 Decay Slope,nrpn,0,54,0,127,0,assumed,0
+nrpn_0_55,Env 5,Env5 Touch Trigger,nrpn,0,55,0,127,0,assumed,0
+nrpn_0_56,Env 6,Env6 Delay,nrpn,0,56,0,127,0,assumed,0
+nrpn_0_57,Env 6,Env6 Attack,nrpn,0,57,0,127,0,assumed,0
+nrpn_0_58,Env 6,Env6 Decay,nrpn,0,58,0,127,0,assumed,0
+nrpn_0_59,Env 6,Env6 Sustain Level,nrpn,0,59,0,127,0,assumed,0
+nrpn_0_60,Env 6,Env6 Release,nrpn,0,60,0,127,0,assumed,0
+nrpn_0_61,Env 6,Env6 Sustain Rate,nrpn,0,61,0,127,0,assumed,0
+nrpn_0_62,Env 6,Env6 Sustain Time,nrpn,0,62,0,127,0,assumed,0
+nrpn_0_63,Env 6,Env6 A/D Repeats,nrpn,0,63,0,127,0,assumed,0
+nrpn_0_64,Env 6,Env6 Attack Track,nrpn,0,64,0,127,0,assumed,0
+nrpn_0_65,Env 6,Env6 Decay Track,nrpn,0,65,0,127,0,assumed,0
+nrpn_0_66,Env 6,Env6 Level Track,nrpn,0,66,0,127,0,assumed,0
+nrpn_0_67,Env 6,Env6 Attack Slope,nrpn,0,67,0,127,0,assumed,0
+nrpn_0_68,Env 6,Env6 Decay Slope,nrpn,0,68,0,127,0,assumed,0
+nrpn_0_69,Env 6,Env6 Touch Trigger,nrpn,0,69,0,127,0,assumed,0
+nrpn_0_70,LFO 1,Lfo1 Waveform,nrpn,0,70,0,127,0,assumed,0
+nrpn_0_71,LFO 1,Lfo1 Phase Offset,nrpn,0,71,0,127,0,assumed,0
+nrpn_0_72,LFO 1,Lfo1 Slew Rate,nrpn,0,72,0,127,0,assumed,0
+nrpn_0_73,LFO 1,Lfo1 Shape,nrpn,0,73,0,127,0,assumed,0
+nrpn_0_74,LFO 1,Lfo1 Delay,nrpn,0,74,0,127,0,assumed,0
+nrpn_0_75,LFO 1,Lfo1 Delay Sync,nrpn,0,75,0,127,0,assumed,0
+nrpn_0_76,LFO 1,Lfo1 Rate,nrpn,0,76,0,127,0,assumed,0
+nrpn_0_77,LFO 1,Lfo1 Rate Sync,nrpn,0,77,0,127,0,assumed,0
+nrpn_0_78,LFO 1,"Lfo1 Packed Data (bits 4 Fade, 3 DelayMulti, 2 Common, 1 KeySync, 0 OneShot)",nrpn,0,78,0,127,0,assumed,0
+nrpn_0_79,LFO 2,Lfo2 Waveform,nrpn,0,79,0,127,0,assumed,0
+nrpn_0_80,LFO 2,Lfo2 Phase Offset,nrpn,0,80,0,127,0,assumed,0
+nrpn_0_81,LFO 2,Lfo2 Slew Rate,nrpn,0,81,0,127,0,assumed,0
+nrpn_0_82,LFO 2,Lfo2 Shape,nrpn,0,82,0,127,0,assumed,0
+nrpn_0_83,LFO 2,Lfo2 Delay,nrpn,0,83,0,127,0,assumed,0
+nrpn_0_84,LFO 2,Lfo2 Delay Sync,nrpn,0,84,0,127,0,assumed,0
+nrpn_0_85,LFO 2,Lfo2 Rate,nrpn,0,85,0,127,0,assumed,0
+nrpn_0_86,LFO 2,Lfo2 Rate Sync,nrpn,0,86,0,127,0,assumed,0
+nrpn_0_87,LFO 2,"Lfo2 Packed Data (bits 4 Fade, 3 DelayMulti, 2 Common, 1 KeySync, 0 OneShot)",nrpn,0,87,0,127,0,assumed,0
+nrpn_0_88,LFO 3,Lfo3 Waveform,nrpn,0,88,0,127,0,assumed,0
+nrpn_0_89,LFO 3,Lfo3 Phase Offset,nrpn,0,89,0,127,0,assumed,0
+nrpn_0_90,LFO 3,Lfo3 Slew Rate,nrpn,0,90,0,127,0,assumed,0
+nrpn_0_91,LFO 3,Lfo3 Shape,nrpn,0,91,0,127,0,assumed,0
+nrpn_0_92,LFO 3,Lfo3 Delay,nrpn,0,92,0,127,0,assumed,0
+nrpn_0_93,LFO 3,Lfo3 Delay Sync,nrpn,0,93,0,127,0,assumed,0
+nrpn_0_94,LFO 3,Lfo3 Rate,nrpn,0,94,0,127,0,assumed,0
+nrpn_0_95,LFO 3,Lfo3 Rate Sync,nrpn,0,95,0,127,0,assumed,0
+nrpn_0_96,LFO 3,"Lfo3 Packed Data (bits 4 Fade, 3 DelayMulti, 2 Common, 1 KeySync, 0 OneShot)",nrpn,0,96,0,127,0,assumed,0
+nrpn_0_97,FX,Fx Configuration,nrpn,0,97,0,127,0,assumed,0
+nrpn_0_98,FX,Fx Feedback,nrpn,0,98,0,127,0,assumed,0
+nrpn_0_99,FX,Fx Slot1 Effect Select,nrpn,0,99,0,127,0,assumed,0
+nrpn_0_100,FX,Fx Slot2 Effect Select,nrpn,0,100,0,127,0,assumed,0
+nrpn_0_101,FX,Fx Slot3 Effect Select,nrpn,0,101,0,127,0,assumed,0
+nrpn_0_102,FX,Fx Slot4 Effect Select,nrpn,0,102,0,127,0,assumed,0
+nrpn_0_103,FX,Fx Slot5 Effect Select,nrpn,0,103,0,127,0,assumed,0
+nrpn_0_104,EQ,Bass EQ Frequency,nrpn,0,104,0,127,0,assumed,0
+nrpn_0_105,EQ,Bass EQ Level,nrpn,0,105,0,127,0,assumed,0
+nrpn_0_106,EQ,Mid EQ Frequency,nrpn,0,106,0,127,0,assumed,0
+nrpn_0_107,EQ,Mid EQ Level,nrpn,0,107,0,127,0,assumed,0
+nrpn_0_108,EQ,Treble EQ Frequency,nrpn,0,108,0,127,0,assumed,0
+nrpn_0_109,EQ,Treble EQ Level,nrpn,0,109,0,127,0,assumed,0
+nrpn_0_110,Compressor 1,Compress1 Ratio,nrpn,0,110,0,127,0,assumed,0
+nrpn_0_111,Compressor 1,Compress1 Threshold,nrpn,0,111,0,127,0,assumed,0
+nrpn_0_112,Compressor 1,Compress1 Attack,nrpn,0,112,0,127,0,assumed,0
+nrpn_0_113,Compressor 1,Compress1 Release,nrpn,0,113,0,127,0,assumed,0
+nrpn_0_114,Compressor 1,Compress1 Hold,nrpn,0,114,0,127,0,assumed,0
+nrpn_0_115,Compressor 1,Compress1 Auto-Gain,nrpn,0,115,0,127,0,assumed,0
+nrpn_0_116,Compressor 2,Compress2 Ratio,nrpn,0,116,0,127,0,assumed,0
+nrpn_0_117,Compressor 2,Compress2 Threshold,nrpn,0,117,0,127,0,assumed,0
+nrpn_0_118,Compressor 2,Compress2 Attack,nrpn,0,118,0,127,0,assumed,0
+nrpn_0_119,Compressor 2,Compress2 Release,nrpn,0,119,0,127,0,assumed,0
+nrpn_0_120,Compressor 2,Compress2 Hold,nrpn,0,120,0,127,0,assumed,0
+nrpn_0_121,Compressor 2,Compress2 Auto-Gain,nrpn,0,121,0,127,0,assumed,0
+nrpn_1_0,Distortion,Distort1 Type,nrpn,1,0,0,127,0,assumed,0
+nrpn_1_1,Distortion,Distort1 Compensation,nrpn,1,1,0,127,0,assumed,0
+nrpn_1_2,Distortion,Distort1 Output Level,nrpn,1,2,0,127,0,assumed,0
+nrpn_1_3,Distortion,Distort2 Type,nrpn,1,3,0,127,0,assumed,0
+nrpn_1_4,Distortion,Distort2 Compensation,nrpn,1,4,0,127,0,assumed,0
+nrpn_1_5,Distortion,Distort2 Output Level,nrpn,1,5,0,127,0,assumed,0
+nrpn_1_6,Delay,Delay1 Time,nrpn,1,6,0,127,0,assumed,0
+nrpn_1_7,Delay,Delay1 Sync Time,nrpn,1,7,0,127,0,assumed,0
+nrpn_1_8,Delay,Delay1 Feedback,nrpn,1,8,0,127,0,assumed,0
+nrpn_1_9,Delay,Delay1 Width,nrpn,1,9,0,127,0,assumed,0
+nrpn_1_10,Delay,Delay1 L/R Ratio,nrpn,1,10,0,127,0,assumed,0
+nrpn_1_11,Delay,Delay1 Slew Rate,nrpn,1,11,0,127,0,assumed,0
+nrpn_1_12,Delay,Delay2 Time,nrpn,1,12,0,127,0,assumed,0
+nrpn_1_13,Delay,Delay2 Sync Time,nrpn,1,13,0,127,0,assumed,0
+nrpn_1_14,Delay,Delay2 Feedback,nrpn,1,14,0,127,0,assumed,0
+nrpn_1_15,Delay,Delay2 Width,nrpn,1,15,0,127,0,assumed,0
+nrpn_1_16,Delay,Delay2 L/R Ratio,nrpn,1,16,0,127,0,assumed,0
+nrpn_1_17,Delay,Delay2 Slew Rate,nrpn,1,17,0,127,0,assumed,0
+nrpn_1_18,Reverb,Reverb1 Type,nrpn,1,18,0,127,0,assumed,0
+nrpn_1_19,Reverb,Reverb1 Decay,nrpn,1,19,0,127,0,assumed,0
+nrpn_1_20,Reverb,Reverb1 Damping,nrpn,1,20,0,127,0,assumed,0
+nrpn_1_21,Reverb,Reverb2 Type,nrpn,1,21,0,127,0,assumed,0
+nrpn_1_22,Reverb,Reverb2 Decay,nrpn,1,22,0,127,0,assumed,0
+nrpn_1_23,Reverb,Reverb2 Damping,nrpn,1,23,0,127,0,assumed,0
+nrpn_1_24,Phaser Chorus,Phaser/Chorus1 Type,nrpn,1,24,0,127,0,assumed,0
+nrpn_1_25,Phaser Chorus,Phaser/Chorus1 Rate,nrpn,1,25,0,127,0,assumed,0
+nrpn_1_26,Phaser Chorus,Phaser/Chorus1 Rate Sync,nrpn,1,26,0,127,0,assumed,0
+nrpn_1_27,Phaser Chorus,Phaser/Chorus1 Feedback,nrpn,1,27,0,127,0,assumed,0
+nrpn_1_28,Phaser Chorus,Phaser/Chorus1 Mod Depth,nrpn,1,28,0,127,0,assumed,0
+nrpn_1_29,Phaser Chorus,Phaser/Chorus1 Delay,nrpn,1,29,0,127,0,assumed,0
+nrpn_1_30,Phaser Chorus,Phaser/Chorus2 Type,nrpn,1,30,0,127,0,assumed,0
+nrpn_1_31,Phaser Chorus,Phaser/Chorus2 Rate,nrpn,1,31,0,127,0,assumed,0
+nrpn_1_32,Phaser Chorus,Phaser/Chorus2 Rate Sync,nrpn,1,32,0,127,0,assumed,0
+nrpn_1_33,Phaser Chorus,Phaser/Chorus2 Feedback,nrpn,1,33,0,127,0,assumed,0
+nrpn_1_34,Phaser Chorus,Phaser/Chorus2 Mod Depth,nrpn,1,34,0,127,0,assumed,0
+nrpn_1_35,Phaser Chorus,Phaser/Chorus2 Delay,nrpn,1,35,0,127,0,assumed,0
+nrpn_1_36,Phaser Chorus,Phaser/Chorus3 Type,nrpn,1,36,0,127,0,assumed,0
+nrpn_1_37,Phaser Chorus,Phaser/Chorus3 Rate,nrpn,1,37,0,127,0,assumed,0
+nrpn_1_38,Phaser Chorus,Phaser/Chorus3 Rate Sync,nrpn,1,38,0,127,0,assumed,0
+nrpn_1_39,Phaser Chorus,Phaser/Chorus3 Feedback,nrpn,1,39,0,127,0,assumed,0
+nrpn_1_40,Phaser Chorus,Phaser/Chorus3 Mod Depth,nrpn,1,40,0,127,0,assumed,0
+nrpn_1_41,Phaser Chorus,Phaser/Chorus3 Delay,nrpn,1,41,0,127,0,assumed,0
+nrpn_1_42,Phaser Chorus,Phaser/Chorus4 Type,nrpn,1,42,0,127,0,assumed,0
+nrpn_1_43,Phaser Chorus,Phaser/Chorus4 Rate,nrpn,1,43,0,127,0,assumed,0
+nrpn_1_44,Phaser Chorus,Phaser/Chorus4 Rate Sync,nrpn,1,44,0,127,0,assumed,0
+nrpn_1_45,Phaser Chorus,Phaser/Chorus4 Feedback,nrpn,1,45,0,127,0,assumed,0
+nrpn_1_46,Phaser Chorus,Phaser/Chorus4 Mod Depth,nrpn,1,46,0,127,0,assumed,0
+nrpn_1_47,Phaser Chorus,Phaser/Chorus4 Delay,nrpn,1,47,0,127,0,assumed,0
+nrpn_1_48,Gator,"Gator Packed Data (bits 2 Latch, 1 KeySync, 0 On)",nrpn,1,48,0,127,0,assumed,0
+nrpn_1_49,Gator,Gator Rate Sync,nrpn,1,49,0,127,0,assumed,0
+nrpn_1_50,Gator,Gator Mode,nrpn,1,50,0,127,0,assumed,0
+nrpn_1_51,Gator,Gator Level,nrpn,1,51,0,127,0,assumed,0
+nrpn_1_52,Gator,Gator Edge Slew,nrpn,1,52,0,127,0,assumed,0
+nrpn_1_53,Gator,Gator Decay,nrpn,1,53,0,127,0,assumed,0
+nrpn_1_54,Gator,Gator Delay,nrpn,1,54,0,127,0,assumed,0
+nrpn_1_55,Vocoder,"Vocoder Packed Data (bits 1 SibType, 0 On)",nrpn,1,55,0,127,0,assumed,0
+nrpn_1_56,Vocoder,Vocoder Balance,nrpn,1,56,0,127,0,assumed,0
+nrpn_1_57,Vocoder,Vocoder Width,nrpn,1,57,0,127,0,assumed,0
+nrpn_1_58,Vocoder,Vocoder Sibilance,nrpn,1,58,0,127,0,assumed,0
+nrpn_1_59,Vocoder,Vocoder Spectrum Shift,nrpn,1,59,0,127,0,assumed,0
+nrpn_1_60,Vocoder,Vocoder Spectrum Magnify,nrpn,1,60,0,127,0,assumed,0
+nrpn_1_61,Arpeggiator,"Arpeggiator Packed Data (bits 6-5 OutputMode, 2 Latch, 1 KeySync, 0 On)",nrpn,1,61,0,127,0,assumed,0
+nrpn_1_62,Arpeggiator,Arpeggiator Octaves,nrpn,1,62,0,127,0,assumed,0
+nrpn_1_63,Arpeggiator,Arpeggiator Rate Sync,nrpn,1,63,0,127,0,assumed,0
+nrpn_1_64,Arpeggiator,Arpeggiator Gate Time,nrpn,1,64,0,127,0,assumed,0
+nrpn_1_65,Arpeggiator,Arpeggiator Mode,nrpn,1,65,0,127,0,assumed,0
+nrpn_1_66,Arpeggiator,Arpeggiator Pattern,nrpn,1,66,0,127,0,assumed,0
+nrpn_1_67,Arpeggiator,Arpeggiator Velocity,nrpn,1,67,0,127,0,assumed,0
+nrpn_1_69,Arpeggiator,Arpeggiator Sequence,nrpn,1,69,0,127,0,assumed,0
+nrpn_1_70,Arpeggiator,Arpeggiator Quantise,nrpn,1,70,0,127,0,assumed,0
+nrpn_1_78,Chord,Chord Transpose,nrpn,1,78,0,127,0,assumed,0
+nrpn_1_80,Mod matrix,ModMatrix Velocity Slew Rate,nrpn,1,80,0,127,0,assumed,0
+nrpn_1_81,Mod matrix,ModMatrix Touch Slew Rate,nrpn,1,81,0,127,0,assumed,0
+nrpn_1_82,Mod matrix,ModMatrix Select,nrpn,1,82,0,127,0,assumed,0
+nrpn_1_83,Mod matrix,ModMatrix1 Source1,nrpn,1,83,0,127,0,assumed,0
+nrpn_1_84,Mod matrix,ModMatrix1 Source2,nrpn,1,84,0,127,0,assumed,0
+nrpn_1_85,Mod matrix,ModMatrix1 Touch Enable,nrpn,1,85,0,127,0,assumed,0
+nrpn_1_86,Mod matrix,ModMatrix1 Depth,nrpn,1,86,0,127,0,assumed,0
+nrpn_1_87,Mod matrix,ModMatrix1 Destination,nrpn,1,87,0,127,0,assumed,0
+nrpn_1_88,Mod matrix,ModMatrix2 Source1,nrpn,1,88,0,127,0,assumed,0
+nrpn_1_89,Mod matrix,ModMatrix2 Source2,nrpn,1,89,0,127,0,assumed,0
+nrpn_1_90,Mod matrix,ModMatrix2 Touch Enable,nrpn,1,90,0,127,0,assumed,0
+nrpn_1_91,Mod matrix,ModMatrix2 Depth,nrpn,1,91,0,127,0,assumed,0
+nrpn_1_92,Mod matrix,ModMatrix2 Destination,nrpn,1,92,0,127,0,assumed,0
+nrpn_1_93,Mod matrix,ModMatrix3 Source1,nrpn,1,93,0,127,0,assumed,0
+nrpn_1_94,Mod matrix,ModMatrix3 Source2,nrpn,1,94,0,127,0,assumed,0
+nrpn_1_95,Mod matrix,ModMatrix3 Touch Enable,nrpn,1,95,0,127,0,assumed,0
+nrpn_1_96,Mod matrix,ModMatrix3 Depth,nrpn,1,96,0,127,0,assumed,0
+nrpn_1_97,Mod matrix,ModMatrix3 Destination,nrpn,1,97,0,127,0,assumed,0
+nrpn_1_98,Mod matrix,ModMatrix4 Source1,nrpn,1,98,0,127,0,assumed,0
+nrpn_1_99,Mod matrix,ModMatrix4 Source2,nrpn,1,99,0,127,0,assumed,0
+nrpn_1_100,Mod matrix,ModMatrix4 Touch Enable,nrpn,1,100,0,127,0,assumed,0
+nrpn_1_101,Mod matrix,ModMatrix4 Depth,nrpn,1,101,0,127,0,assumed,0
+nrpn_1_102,Mod matrix,ModMatrix4 Destination,nrpn,1,102,0,127,0,assumed,0
+nrpn_1_103,Mod matrix,ModMatrix5 Source1,nrpn,1,103,0,127,0,assumed,0
+nrpn_1_104,Mod matrix,ModMatrix5 Source2,nrpn,1,104,0,127,0,assumed,0
+nrpn_1_105,Mod matrix,ModMatrix5 Touch Enable,nrpn,1,105,0,127,0,assumed,0
+nrpn_1_106,Mod matrix,ModMatrix5 Depth,nrpn,1,106,0,127,0,assumed,0
+nrpn_1_107,Mod matrix,ModMatrix5 Destination,nrpn,1,107,0,127,0,assumed,0
+nrpn_1_108,Mod matrix,ModMatrix6 Source1,nrpn,1,108,0,127,0,assumed,0
+nrpn_1_109,Mod matrix,ModMatrix6 Source2,nrpn,1,109,0,127,0,assumed,0
+nrpn_1_110,Mod matrix,ModMatrix6 Touch Enable,nrpn,1,110,0,127,0,assumed,0
+nrpn_1_111,Mod matrix,ModMatrix6 Depth,nrpn,1,111,0,127,0,assumed,0
+nrpn_1_112,Mod matrix,ModMatrix6 Destination,nrpn,1,112,0,127,0,assumed,0
+nrpn_1_113,Mod matrix,ModMatrix7 Source1,nrpn,1,113,0,127,0,assumed,0
+nrpn_1_114,Mod matrix,ModMatrix7 Source2,nrpn,1,114,0,127,0,assumed,0
+nrpn_1_115,Mod matrix,ModMatrix7 Touch Enable,nrpn,1,115,0,127,0,assumed,0
+nrpn_1_116,Mod matrix,ModMatrix7 Depth,nrpn,1,116,0,127,0,assumed,0
+nrpn_1_117,Mod matrix,ModMatrix7 Destination,nrpn,1,117,0,127,0,assumed,0
+nrpn_1_118,Mod matrix,ModMatrix8 Source1,nrpn,1,118,0,127,0,assumed,0
+nrpn_1_119,Mod matrix,ModMatrix8 Source2,nrpn,1,119,0,127,0,assumed,0
+nrpn_1_120,Mod matrix,ModMatrix8 Touch Enable,nrpn,1,120,0,127,0,assumed,0
+nrpn_1_121,Mod matrix,ModMatrix8 Depth,nrpn,1,121,0,127,0,assumed,0
+nrpn_1_122,Mod matrix,ModMatrix8 Destination,nrpn,1,122,0,127,0,assumed,0
+nrpn_1_123,Mod matrix,ModMatrix9 Source1,nrpn,1,123,0,127,0,assumed,0
+nrpn_1_124,Mod matrix,ModMatrix9 Source2,nrpn,1,124,0,127,0,assumed,0
+nrpn_1_125,Mod matrix,ModMatrix9 Touch Enable,nrpn,1,125,0,127,0,assumed,0
+nrpn_1_126,Mod matrix,ModMatrix9 Depth,nrpn,1,126,0,127,0,assumed,0
+nrpn_1_127,Mod matrix,ModMatrix9 Destination,nrpn,1,127,0,127,0,assumed,0
+nrpn_2_0,Mod matrix,ModMatrix10 Source1,nrpn,2,0,0,127,0,assumed,0
+nrpn_2_1,Mod matrix,ModMatrix10 Source2,nrpn,2,1,0,127,0,assumed,0
+nrpn_2_2,Mod matrix,ModMatrix10 Touch Enable,nrpn,2,2,0,127,0,assumed,0
+nrpn_2_3,Mod matrix,ModMatrix10 Depth,nrpn,2,3,0,127,0,assumed,0
+nrpn_2_4,Mod matrix,ModMatrix10 Destination,nrpn,2,4,0,127,0,assumed,0
+nrpn_2_5,Mod matrix,ModMatrix11 Source1,nrpn,2,5,0,127,0,assumed,0
+nrpn_2_6,Mod matrix,ModMatrix11 Source2,nrpn,2,6,0,127,0,assumed,0
+nrpn_2_7,Mod matrix,ModMatrix11 Touch Enable,nrpn,2,7,0,127,0,assumed,0
+nrpn_2_8,Mod matrix,ModMatrix11 Depth,nrpn,2,8,0,127,0,assumed,0
+nrpn_2_9,Mod matrix,ModMatrix11 Destination,nrpn,2,9,0,127,0,assumed,0
+nrpn_2_10,Mod matrix,ModMatrix12 Source1,nrpn,2,10,0,127,0,assumed,0
+nrpn_2_11,Mod matrix,ModMatrix12 Source2,nrpn,2,11,0,127,0,assumed,0
+nrpn_2_12,Mod matrix,ModMatrix12 Touch Enable,nrpn,2,12,0,127,0,assumed,0
+nrpn_2_13,Mod matrix,ModMatrix12 Depth,nrpn,2,13,0,127,0,assumed,0
+nrpn_2_14,Mod matrix,ModMatrix12 Destination,nrpn,2,14,0,127,0,assumed,0
+nrpn_2_15,Mod matrix,ModMatrix13 Source1,nrpn,2,15,0,127,0,assumed,0
+nrpn_2_16,Mod matrix,ModMatrix13 Source2,nrpn,2,16,0,127,0,assumed,0
+nrpn_2_17,Mod matrix,ModMatrix13 Touch Enable,nrpn,2,17,0,127,0,assumed,0
+nrpn_2_18,Mod matrix,ModMatrix13 Depth,nrpn,2,18,0,127,0,assumed,0
+nrpn_2_19,Mod matrix,ModMatrix13 Destination,nrpn,2,19,0,127,0,assumed,0
+nrpn_2_20,Mod matrix,ModMatrix14 Source1,nrpn,2,20,0,127,0,assumed,0
+nrpn_2_21,Mod matrix,ModMatrix14 Source2,nrpn,2,21,0,127,0,assumed,0
+nrpn_2_22,Mod matrix,ModMatrix14 Touch Enable,nrpn,2,22,0,127,0,assumed,0
+nrpn_2_23,Mod matrix,ModMatrix14 Depth,nrpn,2,23,0,127,0,assumed,0
+nrpn_2_24,Mod matrix,ModMatrix14 Destination,nrpn,2,24,0,127,0,assumed,0
+nrpn_2_25,Mod matrix,ModMatrix15 Source1,nrpn,2,25,0,127,0,assumed,0
+nrpn_2_26,Mod matrix,ModMatrix15 Source2,nrpn,2,26,0,127,0,assumed,0
+nrpn_2_27,Mod matrix,ModMatrix15 Touch Enable,nrpn,2,27,0,127,0,assumed,0
+nrpn_2_28,Mod matrix,ModMatrix15 Depth,nrpn,2,28,0,127,0,assumed,0
+nrpn_2_29,Mod matrix,ModMatrix15 Destination,nrpn,2,29,0,127,0,assumed,0
+nrpn_2_30,Mod matrix,ModMatrix16 Source1,nrpn,2,30,0,127,0,assumed,0
+nrpn_2_31,Mod matrix,ModMatrix16 Source2,nrpn,2,31,0,127,0,assumed,0
+nrpn_2_32,Mod matrix,ModMatrix16 Touch Enable,nrpn,2,32,0,127,0,assumed,0
+nrpn_2_33,Mod matrix,ModMatrix16 Depth,nrpn,2,33,0,127,0,assumed,0
+nrpn_2_34,Mod matrix,ModMatrix16 Destination,nrpn,2,34,0,127,0,assumed,0
+nrpn_2_35,Mod matrix,ModMatrix17 Source1,nrpn,2,35,0,127,0,assumed,0
+nrpn_2_36,Mod matrix,ModMatrix17 Source2,nrpn,2,36,0,127,0,assumed,0
+nrpn_2_37,Mod matrix,ModMatrix17 Touch Enable,nrpn,2,37,0,127,0,assumed,0
+nrpn_2_38,Mod matrix,ModMatrix17 Depth,nrpn,2,38,0,127,0,assumed,0
+nrpn_2_39,Mod matrix,ModMatrix17 Destination,nrpn,2,39,0,127,0,assumed,0
+nrpn_2_40,Mod matrix,ModMatrix18 Source1,nrpn,2,40,0,127,0,assumed,0
+nrpn_2_41,Mod matrix,ModMatrix18 Source2,nrpn,2,41,0,127,0,assumed,0
+nrpn_2_42,Mod matrix,ModMatrix18 Touch Enable,nrpn,2,42,0,127,0,assumed,0
+nrpn_2_43,Mod matrix,ModMatrix18 Depth,nrpn,2,43,0,127,0,assumed,0
+nrpn_2_44,Mod matrix,ModMatrix18 Destination,nrpn,2,44,0,127,0,assumed,0
+nrpn_2_45,Mod matrix,ModMatrix19 Source1,nrpn,2,45,0,127,0,assumed,0
+nrpn_2_46,Mod matrix,ModMatrix19 Source2,nrpn,2,46,0,127,0,assumed,0
+nrpn_2_47,Mod matrix,ModMatrix19 Touch Enable,nrpn,2,47,0,127,0,assumed,0
+nrpn_2_48,Mod matrix,ModMatrix19 Depth,nrpn,2,48,0,127,0,assumed,0
+nrpn_2_49,Mod matrix,ModMatrix19 Destination,nrpn,2,49,0,127,0,assumed,0
+nrpn_2_50,Mod matrix,ModMatrix20 Source1,nrpn,2,50,0,127,0,assumed,0
+nrpn_2_51,Mod matrix,ModMatrix20 Source2,nrpn,2,51,0,127,0,assumed,0
+nrpn_2_52,Mod matrix,ModMatrix20 Touch Enable,nrpn,2,52,0,127,0,assumed,0
+nrpn_2_53,Mod matrix,ModMatrix20 Depth,nrpn,2,53,0,127,0,assumed,0
+nrpn_2_54,Mod matrix,ModMatrix20 Destination,nrpn,2,54,0,127,0,assumed,0
+nrpn_2_63,Clock,ClockBPM (14-bit),nrpn14,2,63,0,16383,0,manual,0
+nrpn_5_0,Gator levels,Gator Level L1,nrpn,5,0,0,7,0,manual,0
+nrpn_5_1,Gator levels,Gator Level L2,nrpn,5,1,0,7,0,manual,0
+nrpn_5_2,Gator levels,Gator Level L3,nrpn,5,2,0,7,0,manual,0
+nrpn_5_3,Gator levels,Gator Level L4,nrpn,5,3,0,7,0,manual,0
+nrpn_5_4,Gator levels,Gator Level L5,nrpn,5,4,0,7,0,manual,0
+nrpn_5_5,Gator levels,Gator Level L6,nrpn,5,5,0,7,0,manual,0
+nrpn_5_6,Gator levels,Gator Level L7,nrpn,5,6,0,7,0,manual,0
+nrpn_5_7,Gator levels,Gator Level L8,nrpn,5,7,0,7,0,manual,0
+nrpn_5_8,Gator levels,Gator Level L9,nrpn,5,8,0,7,0,manual,0
+nrpn_5_9,Gator levels,Gator Level L10,nrpn,5,9,0,7,0,manual,0
+nrpn_5_10,Gator levels,Gator Level L11,nrpn,5,10,0,7,0,manual,0
+nrpn_5_11,Gator levels,Gator Level L12,nrpn,5,11,0,7,0,manual,0
+nrpn_5_12,Gator levels,Gator Level L13,nrpn,5,12,0,7,0,manual,0
+nrpn_5_13,Gator levels,Gator Level L14,nrpn,5,13,0,7,0,manual,0
+nrpn_5_14,Gator levels,Gator Level L15,nrpn,5,14,0,7,0,manual,0
+nrpn_5_15,Gator levels,Gator Level L16,nrpn,5,15,0,7,0,manual,0
+nrpn_5_16,Gator levels,Gator Level R1,nrpn,5,16,0,7,0,manual,0
+nrpn_5_17,Gator levels,Gator Level R2,nrpn,5,17,0,7,0,manual,0
+nrpn_5_18,Gator levels,Gator Level R3,nrpn,5,18,0,7,0,manual,0
+nrpn_5_19,Gator levels,Gator Level R4,nrpn,5,19,0,7,0,manual,0
+nrpn_5_20,Gator levels,Gator Level R5,nrpn,5,20,0,7,0,manual,0
+nrpn_5_21,Gator levels,Gator Level R6,nrpn,5,21,0,7,0,manual,0
+nrpn_5_22,Gator levels,Gator Level R7,nrpn,5,22,0,7,0,manual,0
+nrpn_5_23,Gator levels,Gator Level R8,nrpn,5,23,0,7,0,manual,0
+nrpn_5_24,Gator levels,Gator Level R9,nrpn,5,24,0,7,0,manual,0
+nrpn_5_25,Gator levels,Gator Level R10,nrpn,5,25,0,7,0,manual,0
+nrpn_5_26,Gator levels,Gator Level R11,nrpn,5,26,0,7,0,manual,0
+nrpn_5_27,Gator levels,Gator Level R12,nrpn,5,27,0,7,0,manual,0
+nrpn_5_28,Gator levels,Gator Level R13,nrpn,5,28,0,7,0,manual,0
+nrpn_5_29,Gator levels,Gator Level R14,nrpn,5,29,0,7,0,manual,0
+nrpn_5_30,Gator levels,Gator Level R15,nrpn,5,30,0,7,0,manual,0
+nrpn_5_31,Gator levels,Gator Level R16,nrpn,5,31,0,7,0,manual,0
+nrpn_60_0,Touch controls,"Touch 1 (0..63 off, 64..127 touched)",nrpn,60,0,0,127,0,manual,0
+nrpn_60_1,Touch controls,"Touch 2 (0..63 off, 64..127 touched)",nrpn,60,1,0,127,0,manual,0
+nrpn_60_2,Touch controls,"Touch 3 (0..63 off, 64..127 touched)",nrpn,60,2,0,127,0,manual,0
+nrpn_60_3,Touch controls,"Touch 4 (0..63 off, 64..127 touched)",nrpn,60,3,0,127,0,manual,0
+nrpn_60_4,Touch controls,"Touch 5 (0..63 off, 64..127 touched)",nrpn,60,4,0,127,0,manual,0
+nrpn_60_5,Touch controls,"Touch 6 (0..63 off, 64..127 touched)",nrpn,60,5,0,127,0,manual,0
+nrpn_60_6,Touch controls,"Touch 7 (0..63 off, 64..127 touched)",nrpn,60,6,0,127,0,manual,0
+nrpn_60_7,Touch controls,"Touch 8 (0..63 off, 64..127 touched)",nrpn,60,7,0,127,0,manual,0
+nrpn_61_0,Solo controls,"Solo Osc1 (0..63 off, 64..127 on)",nrpn,61,0,0,127,0,manual,0
+nrpn_61_1,Solo controls,"Solo Osc2 (0..63 off, 64..127 on)",nrpn,61,1,0,127,0,manual,0
+nrpn_61_2,Solo controls,"Solo Osc3 (0..63 off, 64..127 on)",nrpn,61,2,0,127,0,manual,0
+nrpn_61_3,Solo controls,"Solo Ringmod 1*3 (0..63 off, 64..127 on)",nrpn,61,3,0,127,0,manual,0
+nrpn_61_4,Solo controls,"Solo Ringmod 2*3 (0..63 off, 64..127 on)",nrpn,61,4,0,127,0,manual,0
+nrpn_61_5,Solo controls,"Solo Noise (0..63 off, 64..127 on)",nrpn,61,5,0,127,0,manual,0
+nrpn_64_0,Global,Protect,nrpn,64,0,0,127,0,assumed,0
+nrpn_64_2,Global,Power-up Bank,nrpn,64,2,0,127,0,assumed,0
+nrpn_64_3,Global,Power-up Patch,nrpn,64,3,0,127,0,assumed,0
+nrpn_64_4,Global,Global MIDI Channel,nrpn,64,4,0,127,0,assumed,0
+nrpn_64_6,Global,Master Tune Cents,nrpn,64,6,0,127,0,assumed,0
+nrpn_64_7,Global,Master Transpose Semitones,nrpn,64,7,0,127,0,assumed,0
+nrpn_64_8,Global,Keyboard Velocity Curve,nrpn,64,8,0,127,0,assumed,0
+nrpn_64_9,Global,Synth Engine Velocity Response,nrpn,64,9,0,127,0,assumed,0
+nrpn_64_11,Global,MIDI Clock Source,nrpn,64,11,0,127,0,assumed,0
+nrpn_64_14,Global,Footswitch Mode,nrpn,64,14,0,127,0,assumed,0
+nrpn_64_15,Global,Touch Filter Lock,nrpn,64,15,0,127,0,assumed,0
+nrpn_64_16,Global,MIDI In Socket Function,nrpn,64,16,0,127,0,assumed,0
+nrpn_64_17,Global,MIDI Out Socket Function,nrpn,64,17,0,127,0,assumed,0
+nrpn_64_18,Global,USB-disconnected Sample Rate,nrpn,64,18,0,127,0,assumed,0
+nrpn_64_19,Global,Patch Find Method,nrpn,64,19,0,127,0,assumed,0
+nrpn_64_28,Global,Input1 Gain dB,nrpn,64,28,0,127,0,assumed,0
+nrpn_64_29,Global,Input2 Gain dB,nrpn,64,29,0,127,0,assumed,0
+nrpn_64_30,Global,Input1 to Fx,nrpn,64,30,0,127,0,assumed,0
+nrpn_64_31,Global,Input2 to Fx,nrpn,64,31,0,127,0,assumed,0
+nrpn_64_32,Global,Inputs 1/2 Link,nrpn,64,32,0,127,0,assumed,0
+nrpn_64_33,Global,Synth to Outputs 1/2,nrpn,64,33,0,127,0,assumed,0
+nrpn_64_34,Global,Input1 to Outputs 1/2,nrpn,64,34,0,127,0,assumed,0
+nrpn_64_35,Global,Input2 to Outputs 1/2,nrpn,64,35,0,127,0,assumed,0
+nrpn_64_36,Global,Record Mode,nrpn,64,36,0,127,0,assumed,0
+nrpn_64_37,Global,Synth to Outputs 3/4,nrpn,64,37,0,127,0,assumed,0
+nrpn_64_38,Global,Input1 to Outputs 3/4,nrpn,64,38,0,127,0,assumed,0
+nrpn_64_39,Global,Input2 to Outputs 3/4,nrpn,64,39,0,127,0,assumed,0
+nrpn_64_40,Global,Outputs 3/4 Level,nrpn,64,40,0,127,0,assumed,0
+nrpn_64_41,Global,Outputs 3/4 Balance,nrpn,64,41,0,127,0,assumed,0
+nrpn_64_42,Global,Phones Level Mode,nrpn,64,42,0,127,0,assumed,0
+nrpn_64_43,Global,Phones Level (levbal mode),nrpn,64,43,0,127,0,assumed,0
+nrpn_64_44,Global,Phones Balance (levbal mode),nrpn,64,44,0,127,0,assumed,0

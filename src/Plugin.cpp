@@ -10,8 +10,8 @@
 
 namespace
 {
-constexpr int kMaxParams = 400;     // keeps the host's parameter list reasonable
-constexpr int kPerBlock = 16;       // at most this many parameters are sent per audio block, so a device is never flooded
+constexpr int kMaxParams = 640;     // the whole map (about 480) plus headroom
+constexpr size_t kMsgsPerBlock = 48;   // at most this many MIDI messages per audio block (16 NRPNs), so a device is never flooded
 
 ctl::ParseResult loadMap()
 {
@@ -22,14 +22,16 @@ ctl::ParseResult loadMap()
 class CtlProcessor : public juce::AudioProcessor, private juce::AudioProcessorParameter::Listener, private juce::Timer
 {
 public:
-    CtlProcessor() : AudioProcessor(BusesProperties()), mapRes(loadMap()), decoder(mapRes.params)
+    CtlProcessor() : AudioProcessor(BusesProperties()), mapRes(loadMap()), decoder(mapRes.params), outbox(mapRes.params)
     {
         auto ch = std::make_unique<juce::AudioParameterInt>(juce::ParameterID{ "midi_channel", 1 }, "MIDI channel", 1, 16, 1);
         channelParam = ch.get(); addParameter(ch.release());
         for (auto& p : mapRes.params)
         {
             if (p.kind == ctl::Kind::Pair || int(slots.size()) >= kMaxParams) continue;
-            auto ip = std::make_unique<juce::AudioParameterInt>(juce::ParameterID{ p.id, 1 }, p.name, p.minV, p.maxV, p.defV);
+            // Global / audio setup values (master tune, power-up patch, protect, routing) are never automated: a host lane must not rewrite the unit's setup
+            auto ip = std::make_unique<juce::AudioParameterInt>(juce::ParameterID{ p.id, 1 }, p.name, p.minV, p.maxV, p.defV,
+                                                                juce::AudioParameterIntAttributes().withAutomatable(!p.isGlobal()));
             Slot s; s.param = ip.get(); s.map = int(&p - mapRes.params.data()); slots.push_back(s);
             addParameter(ip.release());
         }
@@ -44,7 +46,8 @@ public:
     std::vector<Slot> slots;
     juce::AudioParameterInt* channelParam = nullptr;
 
-    void sendAll() { for (size_t i = 0; i < slots.size(); ++i) pending[i] = slots[i].param->get(); }
+    // Pushes the plugin's values to the device. Global / audio setup values are left out on purpose.
+    void sendAll() { for (size_t i = 0; i < slots.size(); ++i) if (!mapRes.params[size_t(slots[i].map)].isGlobal()) pending[i] = slots[i].param->get(); }
 
     void prepareToPlay(double, int) override { decoder.reset(); }
     void releaseResources() override {}
@@ -67,14 +70,11 @@ public:
         }
         midi.swapWith(passthru);
         // 2. outgoing: changed parameters, a few per block
-        const int ch = channelParam->get(); const int n = int(slots.size()); int sent = 0, pos = 0;
-        for (int k = 0; k < n && sent < kPerBlock; ++k)
-        {
-            const int i = (rotate + k) % n; const int v = pending[size_t(i)].exchange(-1); if (v < 0) continue;
-            for (const auto& m : ctl::encode(mapRes.params[size_t(slots[size_t(i)].map)], ch, v))
-            { const juce::uint8 bytes[3] = { m.status, m.d1, m.d2 }; midi.addEvent(bytes, 3, juce::jmin(pos++, juce::jmax(0, audio.getNumSamples() - 1))); }
-            ++sent; rotate = (i + 1) % n;
-        }
+        outbox.setChannel(channelParam->get());
+        for (size_t i = 0; i < slots.size(); ++i) { const int v = pending[i].exchange(-1); if (v >= 0) outbox.set(size_t(slots[i].map), v); }
+        ctl::Msg out[kMsgsPerBlock]; const size_t n = outbox.drain(out, kMsgsPerBlock); int pos = 0;
+        for (size_t k = 0; k < n; ++k)
+        { const juce::uint8 bytes[3] = { out[k].status, out[k].d1, out[k].d2 }; midi.addEvent(bytes, out[k].len, juce::jmin(pos++, juce::jmax(0, audio.getNumSamples() - 1))); }
     }
 
     juce::AudioProcessorEditor* createEditor() override;
@@ -132,9 +132,9 @@ private:
         }
     }
 
-    ctl::Decoder decoder;
+    ctl::Decoder decoder; ctl::Outbox outbox;
     std::unique_ptr<std::atomic<int>[]> pending, lastRecv, incoming;
-    std::vector<int> lastSeen; int rotate = 0;
+    std::vector<int> lastSeen;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CtlProcessor)
 };
 
@@ -165,7 +165,7 @@ public:
         group.addItem("All groups", 1); int id = 2; for (auto& g : groups) group.addItem(g, id++);
         group.setSelectedId(1, juce::dontSendNotification); group.onChange = [this] { rebuild(); };
         filter.setTextToShowWhenEmpty("search", juce::Colours::grey); filter.onTextChange = [this] { rebuild(); };
-        sendAll.setButtonText("Send all"); sendAll.setTooltip("Sends every parameter value to the device now."); sendAll.onClick = [this] { proc.sendAll(); };
+        sendAll.setButtonText("Send all"); sendAll.setTooltip("Sends the plugin's value of every patch parameter to the device now, replacing the sound being edited. Global / audio setup values are not sent."); sendAll.onClick = [this] { proc.sendAll(); };
         chLabel.setText("MIDI channel", juce::dontSendNotification);
         chSlider.setSliderStyle(juce::Slider::IncDecButtons); chSlider.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 36, 24);
         chAttach = std::make_unique<juce::SliderParameterAttachment>(*proc.channelParam, chSlider);
@@ -194,7 +194,7 @@ private:
     {
         delete existing; if (row < 0 || row >= int(shown.size())) return nullptr;
         auto& s = proc.slots[size_t(shown[size_t(row)])]; auto& m = proc.mapRes.params[size_t(s.map)];
-        juce::String addr = m.kind == ctl::Kind::CC ? "CC " + juce::String(m.a) : "NRPN " + juce::String(m.a) + ":" + juce::String(m.b);
+        juce::String addr = m.kind == ctl::Kind::CC ? "CC " + juce::String(m.a) : "NRPN " + juce::String(m.a) + ":" + juce::String(m.b) + (m.kind == ctl::Kind::NRPN14 ? " (14 bit)" : "");
         return new ParamRow(*s.param, addr + (m.rangeFromManual ? ", range from the manual" : ", range 0 to 127 assumed") + (m.hwVerified ? ", tested on hardware" : ", not tested on hardware yet"));
     }
     void rebuild()

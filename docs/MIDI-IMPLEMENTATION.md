@@ -179,3 +179,11 @@ Mod matrix slot layout: five consecutive NRPNs per slot: Source1, Source2, Touch
 2. The CC 57 duplicate.
 3. Patch SysEx dump/request format (not in this document).
 4. Behaviour of NRPN reads: whether the unit answers requests, or only transmits on panel edits, is not stated.
+
+## How the plugin backend uses these rules
+
+- Sending: NRPN is always CC 99, CC 98, CC 6 (the MSB is sent also for 0). ClockBPM (2:63) is CC 99, 98, 6 (data MSB), 38 (data LSB).
+- Receiving: nrpnMSB starts at 0 and returns to 0 after every CC 6, so CC 98 + CC 6 alone addresses 0:xxx. A 14 bit value is applied when CC 38 arrives; a second CC 38 is ignored.
+- Packed bytes (LFO, Gator, Vocoder, Arpeggiator) are exposed as whole bytes. Only the bit positions printed above are known; the other bits are not, so a UI must change its own field and keep the rest (helpers `getBits` / `setBits` in src/MidiCore.h).
+- Not exposed: 0:122 to 0:127 (packed specials), 1:68, 1:79 and 2:55 to 2:62 (spare), global spares.
+- Device inquiry: `identityRequest()` and `parseIdentityReply()` follow the standard Universal Device Inquiry. The model number of the UltraNova is not in our sources, so the reply is shown, not matched.
