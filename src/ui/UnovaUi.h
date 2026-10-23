@@ -61,12 +61,25 @@ inline juce::String pageKeyFromHref(const juce::String& h)
     if (h == "UNova_FX") return "fx"; if (h == "UNova_Global") return "global"; if (h == "UNova_Lib") return "lib"; return {};
 }
 
+// The mockup's fonts (Exo 2 and VT323, both OFL), loaded once from the bundled files.
+inline juce::Typeface::Ptr face(int weight, bool vt)
+{
+    static juce::Typeface::Ptr f300, f400, f600, vt400;
+    auto load = [](const char* name) { auto m = resource(name); return m.getSize() ? juce::Typeface::createSystemTypefaceFor(m.getData(), m.getSize()) : juce::Typeface::Ptr(); };
+    if (!f400) { f300 = load("exo-2-latin-300-normal.ttf"); f400 = load("exo-2-latin-400-normal.ttf"); f600 = load("exo-2-latin-600-normal.ttf"); vt400 = load("vt323-latin-400-normal.ttf"); }
+    if (vt) return vt400; return weight <= 300 ? f300 : weight >= 600 ? f600 : f400;
+}
+inline juce::Font makeFont(int weight, bool vt, float px) { return juce::Font(juce::FontOptions(face(weight, vt))).withHeight(px); }
+inline float textWidth(const juce::Font& f, const juce::String& t) { juce::GlyphArrangement ga; ga.addLineOfText(f, t, 0, 0); return ga.getBoundingBox(0, -1, true).getWidth(); }
+
+struct TextRun { juce::String t; juce::Rectangle<float> r; juce::Font font; juce::Colour col; int rot = 0; };
+struct DialSpec { juce::Rectangle<float> rect; juce::Colour color; };
 struct KnobSpec { juce::Rectangle<float> rect; float angle = 0; };
 struct NavSpec { juce::String page; juce::Rectangle<float> rect; };
 struct ButtonSpec { juce::String text, label; juce::Rectangle<float> rect; };
 struct PageData
 {
-    juce::Image art; std::vector<KnobSpec> knobs; std::vector<NavSpec> nav; std::vector<ButtonSpec> buttons;
+    juce::Image art; std::vector<KnobSpec> knobs; std::vector<NavSpec> nav; std::vector<ButtonSpec> buttons; std::vector<TextRun> runs; std::vector<DialSpec> dials;
     static std::unique_ptr<PageData> load(const juce::String& key)
     {
         auto pd = std::make_unique<PageData>(); auto png = resource(key + ".png"); auto js = resource(key + ".json");
@@ -76,6 +89,16 @@ struct PageData
         if (auto* ks = v["knobs"].getArray()) for (auto& k : *ks) { KnobSpec s; s.rect = rectOf(k["rect"]); s.angle = k["angle"].isVoid() ? -135.0f : (float) (double) k["angle"]; pd->knobs.push_back(s); }
         if (auto* ns = v["nav"].getArray()) for (auto& n : *ns) pd->nav.push_back({ pageKeyFromHref(n["page"].toString()), rectOf(n["rect"]) });
         if (auto* bs = v["buttons"].getArray()) for (auto& b : *bs) pd->buttons.push_back({ b["text"].toString(), b["label"].toString(), rectOf(b["rect"]) });
+        if (auto* rs = v["runs"].getArray()) for (auto& r : *rs)
+        {
+            TextRun tr; tr.t = r["t"].toString(); tr.r = rectOf(r); tr.rot = (int) r["rot"]; const float size = (float) (double) r["size"], ls = (float) (double) r["ls"];
+            auto c = r["col"]; tr.col = juce::Colour::fromFloatRGBA((float) (double) c[0] / 255.0f, (float) (double) c[1] / 255.0f, (float) (double) c[2] / 255.0f, (float) (double) c[3]);
+            tr.font = makeFont((int) r["weight"], (bool) r["vt"], size); if (ls != 0.0f) tr.font = tr.font.withExtraKerningFactor(ls / size);
+            const float len = (std::abs(tr.rot) % 180 != 0) ? tr.r.getHeight() : tr.r.getWidth(), w = textWidth(tr.font, tr.t);   // match the width the browser gave this text
+            if (w > 1.0f && len > 1.0f) tr.font = tr.font.withHeight(size * juce::jlimit(0.8f, 1.25f, len / w));
+            pd->runs.push_back(std::move(tr));
+        }
+        if (auto* ds = v["dials"].getArray()) for (auto& d : *ds) pd->dials.push_back({ rectOf(d), juce::Colour::fromString("ff" + d["color"].toString().fromFirstOccurrenceOf("#", false, false)) });
         return pd;
     }
 };
@@ -113,6 +136,97 @@ public:
     }
 };
 
+// Waveform choices: 6 basic, 36 wavetables, audio input. The wavetable shapes are illustrative (the real tables are not in Novation's MIDI document).
+inline int waveCount() { return 43; }
+inline juce::String waveName(int i) { static const char* n[6] = { "Sine", "Triangle", "Sawtooth", "Saw 9:1 PW", "Square", "Pulse" }; return i < 6 ? n[i] : i < 42 ? "Wavetable " + juce::String(i - 5) : "Audio in"; }
+inline juce::String waveShort(int i) { static const char* n[6] = { "Sine", "Triangle", "Sawtooth", "Saw 9:1 PW", "Square", "Pulse" }; return i < 6 ? n[i] : i < 42 ? "WT " + juce::String(i - 5) : "Audio"; }
+inline std::function<float(float)> waveFn(int i)
+{
+    const float tp = juce::MathConstants<float>::twoPi;
+    switch (i)
+    {
+        case 0: return [=](float t) { return std::sin(tp * t); };
+        case 1: return [](float t) { return t < 0.5f ? 4 * t - 1 : 3 - 4 * t; };
+        case 2: return [](float t) { return 2 * t - 1; };
+        case 3: return [](float t) { return t < 0.9f ? 2 * (t / 0.9f) - 1 : -1.0f; };
+        case 4: return [](float t) { return t < 0.5f ? 1.0f : -1.0f; };
+        case 5: return [](float t) { return t < 0.25f ? 1.0f : -1.0f; };
+    }
+    if (i >= 42) return [tp](float t) { return 0.75f * std::sin(tp * 2 * t) + 0.25f * std::sin(tp * 7 * t + 1); };
+    float x = (float) (i * 7 + 3); auto rnd = [&x] { x = std::fmod(x * 9301.0f + 49297.0f, 233280.0f); return x / 233280.0f; };
+    std::array<std::pair<float, float>, 5> h; for (int k = 0; k < 5; ++k) { const float a = rnd() / (float) (k + 1) * (1.6f - (float) (k + 1) * 0.2f), ph = rnd() * 6.28f; h[(size_t) k] = { a, ph }; }
+    auto eval = [h, tp](float t) { float v = 0; for (size_t k = 0; k < 5; ++k) v += h[k].first * std::sin(tp * (float) (k + 1) * t + h[k].second); return v; };
+    float m = 0.0001f; for (int q = 0; q < 64; ++q) m = juce::jmax(m, std::abs(eval((float) q / 64.0f)));
+    return [=](float t) { return eval(t) / m; };
+}
+inline juce::Path wavePath(int i, juce::Rectangle<float> r)
+{
+    juce::Path p; auto f = waveFn(i);
+    for (int k = 0; k <= 48; ++k) { const float t = (float) k / 48.0f, x = r.getX() + t * r.getWidth(), y = r.getCentreY() - f(t) * r.getHeight() / 2; if (k) p.lineTo(x, y); else p.startNewSubPath(x, y); }
+    return p;
+}
+
+// The round waveform window of one oscillator. Click it to open the picker.
+class WaveDial : public juce::Component, public juce::SettableTooltipClient
+{
+public:
+    std::function<void(WaveDial&)> onOpen;
+    WaveDial(juce::RangedAudioParameter* p, juce::Colour c) : param(p), colour(c)
+    {
+        setMouseCursor(juce::MouseCursor::PointingHandCursor); setTooltip("Click to choose a waveform (value meanings are assumed, not yet checked on a real UltraNova)");
+        if (p) { attach = std::make_unique<juce::ParameterAttachment>(*p, [this](float v) { index = juce::jlimit(0, waveCount() - 1, juce::roundToInt(v)); repaint(); }); attach->sendInitialUpdate(); }
+    }
+    void choose(int i) { index = i; if (attach) attach->setValueAsCompleteGesture((float) i); repaint(); }
+    int current() const { return index; }
+    juce::Colour colour;
+    void paint(juce::Graphics& g) override
+    {
+        const float u = (float) juce::jmin(getWidth(), getHeight()) / 64.0f; const juce::Point<float> c((float) getWidth() / 2, (float) getHeight() / 2);
+        auto at = [&](float x, float y) { return juce::Point<float>(c.x + (x - 32) * u, c.y + (y - 32) * u); };
+        g.setColour(juce::Colours::black); g.fillEllipse(c.x - 30 * u, c.y - 30 * u, 60 * u, 60 * u);
+        g.setGradientFill(juce::ColourGradient(juce::Colour(0xff0A0A0B), c.x, c.y, colour.withAlpha(0.55f), c.x + 28 * u, c.y, true));
+        auto cg = juce::ColourGradient(juce::Colour(0xff0A0A0B), c.x, c.y, colour.withAlpha(0.55f), c.x + 28 * u, c.y, true); cg.addColour(0.6, juce::Colour(0xff0A0A0B)); g.setGradientFill(cg);
+        g.fillEllipse(c.x - 28 * u, c.y - 28 * u, 56 * u, 56 * u); g.setColour(colour); g.drawEllipse(c.x - 28 * u, c.y - 28 * u, 56 * u, 56 * u, 1.2f * u);
+        g.setColour(juce::Colour(0xff0B0C0E)); g.fillEllipse(c.x - 18 * u, c.y - 18 * u, 36 * u, 36 * u); g.setColour(juce::Colour(0xff3A3D44)); g.drawEllipse(c.x - 18 * u, c.y - 18 * u, 36 * u, 36 * u, u);
+        g.setColour(colour); g.strokePath(wavePath(index, { at(14, 22).x, at(14, 22).y, 36 * u, 22 * u }), juce::PathStrokeType(2.4f * u, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        g.setFont(makeFont(400, false, 5.0f * u)); g.drawText(waveName(index).toLowerCase(), juce::Rectangle<float>(c.x - 26 * u, c.y + 20 * u, 52 * u, 8 * u), juce::Justification::centred, false);
+    }
+    void mouseDown(const juce::MouseEvent&) override { if (onOpen) onOpen(*this); }
+private:
+    juce::RangedAudioParameter* param; std::unique_ptr<juce::ParameterAttachment> attach; int index = 2;
+};
+
+// The pop-up grid: one tile per waveform with its number, name and shape.
+class WavePicker : public juce::Component
+{
+public:
+    std::function<void(int)> onPick; std::function<void()> onClose;
+    WavePicker(int cur, juce::Colour c) : current(cur), colour(c) { setSize(kCols * (kTW + kGap) - kGap + 2 * kPad, 34 + ((waveCount() + kCols - 1) / kCols) * (kTH + kGap) - kGap + kPad); }
+    void paint(juce::Graphics& g) override
+    {
+        g.setColour(juce::Colours::black.withAlpha(0.5f)); g.fillRoundedRectangle(getLocalBounds().toFloat().translated(0, 6), 10);
+        g.setColour(juce::Colour(0xff15171C)); g.fillRoundedRectangle(getLocalBounds().toFloat(), 10); g.setColour(juce::Colour(0xff3A3F4A)); g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 10, 1);
+        g.setColour(juce::Colour(0xffE6E8EC)); g.setFont(makeFont(600, false, 14)); g.drawText("Waveform", kPad, 8, 200, 20, juce::Justification::centredLeft);
+        g.setColour(juce::Colour(0xff8D93A0)); g.setFont(makeFont(400, false, 10)); g.drawText("6 basic, 36 wavetables, audio input. Wavetable shapes are illustrative.", 120, 8, getWidth() - 120 - kPad, 20, juce::Justification::centredRight);
+        for (int i = 0; i < waveCount(); ++i)
+        {
+            auto r = tile(i).toFloat(); const bool on = i == current, hot = i == hover;
+            g.setColour(on ? juce::Colour(0xff222833) : hot ? juce::Colour(0xff252A33) : juce::Colour(0xff1B1E25)); g.fillRoundedRectangle(r, 6);
+            g.setColour(on ? colour : juce::Colour(0xff2E333D)); g.drawRoundedRectangle(r.reduced(0.5f), 6, 1);
+            g.setColour(juce::Colour(0xff8D93A0)); g.setFont(makeFont(400, false, 9)); g.drawText(juce::String(i + 1), r.reduced(6, 4).withHeight(12), juce::Justification::topLeft);
+            g.setColour(on ? colour : juce::Colour(0xff9AA3B5)); g.strokePath(wavePath(i, r.reduced(10, 0).withTrimmedTop(16).withHeight(24)), juce::PathStrokeType(1.6f));
+            g.setColour(on ? juce::Colours::white : juce::Colour(0xffC5CAD6)); g.setFont(makeFont(400, false, 10)); g.drawText(waveShort(i), r.withTrimmedTop(r.getHeight() - 16).withHeight(14), juce::Justification::centred);
+        }
+    }
+    void mouseMove(const juce::MouseEvent& e) override { const int h = hit(e.getPosition()); if (h != hover) { hover = h; repaint(); } }
+    void mouseDown(const juce::MouseEvent& e) override { const int h = hit(e.getPosition()); if (h >= 0 && onPick) onPick(h); }
+    int current, hover = -1; juce::Colour colour;
+private:
+    static constexpr int kCols = 8, kTW = 80, kTH = 64, kGap = 6, kPad = 10;
+    juce::Rectangle<int> tile(int i) const { return { kPad + (i % kCols) * (kTW + kGap), 34 + (i / kCols) * (kTH + kGap), kTW, kTH }; }
+    int hit(juce::Point<int> p) const { for (int i = 0; i < waveCount(); ++i) if (tile(i).contains(p)) return i; return -1; }
+};
+
 // A knob wired to one parameter (or disabled at the mockup's resting angle when there is none).
 class Knob : public juce::Slider
 {
@@ -146,7 +260,7 @@ public:
 
     void showPage(const juce::String& key)
     {
-        knobs.clear(); page = key; data = PageData::load(key); const auto& ids = knobMap().at(key);
+        knobs.clear(); dials.clear(); picker.reset(); page = key; data = PageData::load(key); const auto& ids = knobMap().at(key);
         for (size_t i = 0; i < data->knobs.size(); ++i)
         {
             juce::RangedAudioParameter* prm = nullptr;
@@ -154,14 +268,34 @@ public:
                 for (auto* q : proc.getParameters()) if (auto* r = dynamic_cast<juce::RangedAudioParameter*>(q)) if (r->paramID == ids[i]) { prm = r; break; }
             auto k = std::make_unique<Knob>(prm, data->knobs[i].angle, look); k->setBounds(data->knobs[i].rect.toNearestInt()); addAndMakeVisible(*k); knobs.push_back(std::move(k));
         }
+        static const char* waveIds[3] = { "cc_19", "cc_29", "cc_41" };
+        for (size_t i = 0; i < data->dials.size() && i < 3; ++i)
+        {
+            juce::RangedAudioParameter* prm = nullptr; for (auto* q : proc.getParameters()) if (auto* r = dynamic_cast<juce::RangedAudioParameter*>(q)) if (r->paramID == waveIds[i]) { prm = r; break; }
+            auto d = std::make_unique<WaveDial>(prm, data->dials[i].color); d->setBounds(data->dials[i].rect.toNearestInt()); d->onOpen = [this](WaveDial& wd) { openPicker(wd); }; addAndMakeVisible(*d); dials.push_back(std::move(d));
+        }
         repaint();
     }
+    void openPicker(WaveDial& wd)
+    {
+        picker = std::make_unique<WavePicker>(wd.current(), wd.colour); auto* dp = &wd;
+        picker->onPick = [this, dp](int i) { dp->choose(i); closePicker(); };
+        addAndMakeVisible(*picker); picker->setTopLeftPosition(juce::jlimit(8, kW - picker->getWidth() - 8, wd.getBounds().getCentreX() - picker->getWidth() / 2), juce::jlimit(8, kH - picker->getHeight() - 8, wd.getBottom() - 20)); picker->toFront(true);
+    }
+    void closePicker() { picker.reset(); }
     juce::String currentPage() const { return page; }
 
     void paint(juce::Graphics& g) override
     {
         g.fillAll(juce::Colour(0xff0B0B0C));
         if (data && data->art.isValid()) { g.setImageResamplingQuality(juce::Graphics::highResamplingQuality); g.drawImage(data->art, 0, 0, kW, kH, 0, 0, data->art.getWidth(), data->art.getHeight()); }
+        if (data) for (auto& r : data->runs)
+        {
+            g.setColour(r.col); g.setFont(r.font);
+            if (r.rot % 180 != 0) { const auto c = r.r.getCentre(); g.saveState(); g.addTransform(juce::AffineTransform::rotation(juce::degreesToRadians((float) r.rot), c.x, c.y));
+                g.drawText(r.t, juce::Rectangle<float>(r.r.getHeight(), r.r.getWidth()).withCentre(c), juce::Justification::centred, false); g.restoreState(); }
+            else g.drawText(r.t, r.r, juce::Justification::centred, false);
+        }
         paintWood(g, { 0, 0, kCheek, kH }, true); paintWood(g, { kW - kCheek, 0, kCheek, kH }, false);   // the PurrOne wood, drawn over the cheeks baked into the artwork
     }
     // The wood of the PurrOne mockup: fine vertical grain, dark at both edges and lit in the middle like a rounded cheek.
@@ -177,6 +311,7 @@ public:
     }
     void mouseDown(const juce::MouseEvent& e) override
     {
+        if (picker) { closePicker(); return; }
         if (!data) return; const auto p = e.position;
         for (auto& n : data->nav) if (n.rect.contains(p) && n.page.isNotEmpty()) { showPage(n.page); return; }
         for (auto& b : data->buttons) if (b.rect.contains(p))
@@ -194,7 +329,7 @@ public:
         setMouseCursor(hand ? juce::MouseCursor::PointingHandCursor : juce::MouseCursor::NormalCursor);
     }
 private:
-    juce::AudioProcessor& proc; KnobLook look; juce::String page; std::unique_ptr<PageData> data; std::vector<std::unique_ptr<Knob>> knobs;
+    juce::AudioProcessor& proc; KnobLook look; juce::String page; std::unique_ptr<PageData> data; std::vector<std::unique_ptr<Knob>> knobs; std::vector<std::unique_ptr<WaveDial>> dials; std::unique_ptr<WavePicker> picker;
 };
 
 class Editor : public juce::AudioProcessorEditor

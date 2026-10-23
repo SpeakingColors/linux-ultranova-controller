@@ -38,14 +38,49 @@ JS = r"""([H, W]) => {
   });
   return out;
 }"""
+
+TEXTJS = r"""() => {
+  const root = document.querySelector('x-dc').lastElementChild; const rb = root.getBoundingClientRect();
+  const z = parseFloat(root.style.zoom || '1') || 1;
+  const rgba = c => { const m = c.match(/[\d.]+/g).map(Number); return [m[0], m[1], m[2], m.length > 3 ? m[3] : 1]; };
+  const runs = []; const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); let n;
+  while ((n = walker.nextNode())) {
+    const txt = n.nodeValue; if (!txt.trim()) continue; const p = n.parentElement;
+    if (!p || ['SCRIPT', 'STYLE'].includes(p.tagName) || p.closest('svg') || p.closest('[data-knob]')) continue;
+    const cs = getComputedStyle(p); if (cs.visibility === 'hidden' || cs.display === 'none') continue;
+    let op = 1, ang = 0, e = p; while (e && e !== root.parentElement) { const c = getComputedStyle(e); op *= parseFloat(c.opacity);
+      if (c.transform && c.transform !== 'none') { const m = c.transform.match(/matrix\(([^)]+)\)/); if (m) { const v = m[1].split(',').map(Number); ang += Math.atan2(v[1], v[0]) * 180 / Math.PI; } } e = e.parentElement; }
+    const vertical = (cs.writingMode || '').startsWith('vertical'); if (vertical) ang += 90;
+    const col = rgba(cs.color); col[3] *= op; if (col[3] <= 0.01) continue;
+    const r = document.createRange(); const lines = []; let cur = null;
+    for (let i = 0; i < txt.length; i++) {
+      r.setStart(n, i); r.setEnd(n, i + 1); const rc = r.getClientRects()[0]; if (!rc || (rc.width === 0 && rc.height === 0)) continue;
+      const key = vertical ? rc.left : rc.top; const tol = (parseFloat(cs.fontSize) * z) * 0.6;
+      if (!cur || Math.abs(key - cur.key) > tol) { cur = { key, t: '', l: rc.left, tp: rc.top, r: rc.right, b: rc.bottom }; lines.push(cur); }
+      cur.t += txt[i]; cur.l = Math.min(cur.l, rc.left); cur.tp = Math.min(cur.tp, rc.top); cur.r = Math.max(cur.r, rc.right); cur.b = Math.max(cur.b, rc.bottom);
+    }
+    const tt = cs.textTransform;
+    lines.forEach(L => { let t = L.t.replace(/\s+/g, ' ').trim(); if (!t) return; if (tt === 'uppercase') t = t.toUpperCase(); else if (tt === 'lowercase') t = t.toLowerCase();
+      runs.push({ t, x: +(L.l - rb.left).toFixed(2), y: +(L.tp - rb.top).toFixed(2), w: +(L.r - L.l).toFixed(2), h: +(L.b - L.tp).toFixed(2),
+        size: +(parseFloat(cs.fontSize) * z).toFixed(2), weight: parseInt(cs.fontWeight) || 400, vt: /VT323/i.test(cs.fontFamily), col,
+        ls: +((parseFloat(cs.letterSpacing) || 0) * z).toFixed(3), rot: Math.round(ang) }); });
+  }
+  const dials = [...document.querySelectorAll('[data-wavedial] svg[aria-label^="Waveform"]')].map(sv => { const b = sv.getBoundingClientRect(); const pa = sv.querySelector('path[stroke]');
+    sv.style.visibility = 'hidden'; return { x: +(b.left - rb.left).toFixed(1), y: +(b.top - rb.top).toFixed(1), w: +b.width.toFixed(1), h: +b.height.toFixed(1), color: pa ? pa.getAttribute('stroke') : '#7EE3E8', label: sv.getAttribute('aria-label') }; });
+  return { runs, dials };
+}"""
+HIDE_TEXT = "*{color:transparent !important;text-shadow:none !important;-webkit-text-fill-color:transparent !important} svg text{display:none !important}"
+
 with sync_playwright() as p:
     b = p.chromium.launch(); pg = b.new_page(viewport={"width": 1500, "height": 900}, device_scale_factor=2)
     for key, name in PAGES.items():
         pg.goto("file://%s/docs/mockups/%s.dc.html" % (root, name)); pg.add_style_tag(content=FONTS)
         pg.wait_for_timeout(1500); pg.evaluate("document.fonts.ready"); pg.wait_for_timeout(500)
         info = pg.evaluate(JS, [760, 1348])
+        tx = pg.evaluate(TEXTJS); info["runs"] = tx["runs"]; info["dials"] = tx["dials"]
+        pg.add_style_tag(content=HIDE_TEXT); pg.wait_for_timeout(200)
         el = pg.query_selector("x-dc > :last-child")
         el.screenshot(path=os.path.join(root, "assets/ui/%s.png" % key))
         json.dump(info, open(os.path.join(root, "assets/ui/%s.json" % key), "w"), indent=1)
-        print(key, info["w"], info["h"], len(info["knobs"]), "knobs")
+        print(key, info["w"], info["h"], len(info["knobs"]), "knobs", len(info["runs"]), "text runs", len(info["dials"]), "dials")
     b.close()
