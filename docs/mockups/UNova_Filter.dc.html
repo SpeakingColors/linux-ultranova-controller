@@ -135,6 +135,28 @@ function setupMix(){
       else if(drag.h===3){E.t=c(v.t+dx*127/(50*drag.k));bv[5]=E.t;drawB(5);}else E.r=c(v.r+dx*127/(70*drag.k));drawE();});
     env.addEventListener('pointerup',function(){drag=null;});env.title='Filter envelope: drag the dots (attack, decay and sustain level, sustain time, release)';drawE();}
 }
+
+// ---- drop-down lists for the text boxes (list order assumed, like in the plugin) ----
+var _menu=null;
+function openMenu(el,opts,cur,cb){
+  if(_menu){_menu.remove();_menu=null;}
+  var m=document.createElement('div'),r=el.getBoundingClientRect();
+  m.style.cssText='position:fixed;z-index:9999;background:#2B3038;border:1px solid #4B525F;border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.55);padding:4px 0;min-width:'+Math.max(r.width,110)+'px;max-height:70vh;overflow:auto;font:13px "Exo 2",system-ui,sans-serif;color:#E6E8EC;left:'+r.left+'px;top:'+(r.bottom+2)+'px';
+  opts.forEach(function(o,i){var b=document.createElement('div');b.textContent=(i===cur?'✓ ':' ')+o;b.style.cssText='padding:5px 12px;cursor:pointer;white-space:nowrap';
+    b.onmouseenter=function(){b.style.background='#3C4452';};b.onmouseleave=function(){b.style.background='';};
+    b.onclick=function(e){e.stopPropagation();m.remove();_menu=null;cb(i);};m.appendChild(b);});
+  document.body.appendChild(m);_menu=m;
+  setTimeout(function(){document.addEventListener('click',function h(){if(_menu){_menu.remove();_menu=null;}document.removeEventListener('click',h);},{once:true});},0);
+}
+function dropdownBox(text,opts,startIdx){
+  var el=[].slice.call(document.querySelectorAll('section span,div span')).filter(function(x){return x.children.length===0&&x.textContent.trim()===text&&/border/.test(x.getAttribute('style')||'')&&!x.closest('nav');})[0];
+  if(!el)return;var cur=startIdx;el.style.cursor='pointer';el.title='Click to choose (list order assumed)';
+  el.addEventListener('click',function(e){e.stopPropagation();openMenu(el,opts,cur,function(i){cur=i;el.textContent=opts[i];});});
+}
+setTimeout(function(){var drive=['Diode','Valve','Clipper','XOver','Rectify','BitsDown','RateDown'];dropdownBox('Diode',drive,0);dropdownBox('XOver',drive,3);
+  [].slice.call(document.querySelectorAll('svg[aria-label^="Filter "]')).forEach(function(sv){var tx=sv.querySelector('text');if(!tx)return;
+    sv.style.cursor='pointer';sv.addEventListener('click',function(e){e.stopPropagation();var names=Object.keys(FT),cur=names.indexOf(tx.textContent.trim());
+      openMenu(sv,names,cur,function(i){tx.textContent=names[i];sv.setAttribute('aria-label',sv.getAttribute('aria-label').replace(/(Filter \d )\S+/,'$1'+names[i]));if(sv._redraw)sv._redraw(names[i]);});});});},1100);
 setTimeout(setupMix,900);
 
 // ---- live filter windows: the curve follows type, frequency and resonance (knob angles) ----
@@ -144,7 +166,7 @@ function fdb(ft,fv,rv,f){var fc=20*Math.pow(1000,fv/127);function lp(x,n){return
   if(!ft[3]){var l=Math.log(f/fc);db+=rv/127*18*Math.exp(-l*l/(2*.14*.14));}return db;}
 function setupFilters(){
   [].slice.call(document.querySelectorAll('svg[aria-label^="Filter "]')).forEach(function(sv){
-    var name=(sv.getAttribute('aria-label').match(/Filter \d (\S+)/)||[])[1],ft=FT[name];if(!ft)return;
+    var name=(sv.getAttribute('aria-label').match(/Filter \d (\S+)/)||[])[1],ft=FT[name];if(!ft)return;sv._redraw=function(n){ft=FT[n];draw();};
     var panel=sv.parentElement.parentElement,knobs=[].slice.call(panel.querySelectorAll('[data-knob]'));var fk=knobs[2],rk=knobs[3];if(!fk||!rk)return;
     function ang(kb){var r=kb.querySelector('div[style*="rotate("]');var m=r&&/rotate\((-?[\d.]+)deg\)/.exec(r.getAttribute('style'));return m?parseFloat(m[1]):0;}
     var path=sv.querySelector('path[stroke]'),first=true;

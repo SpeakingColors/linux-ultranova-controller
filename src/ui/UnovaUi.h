@@ -423,11 +423,42 @@ public:
     }
     void mouseDown(const juce::MouseEvent&) override { f0 = pget(F); r0 = pget(R); for (auto* q : { F, R }) if (q) q->beginChangeGesture(); }
     void mouseDrag(const juce::MouseEvent& e) override { pset(F, f0 + (float) e.getOffsetFromDragStart().x * 0.9f); pset(R, r0 - (float) e.getOffsetFromDragStart().y * 0.9f); }
-    void mouseUp(const juce::MouseEvent&) override { for (auto* q : { F, R }) if (q) q->endChangeGesture(); }
+    void mouseUp(const juce::MouseEvent& e) override
+    {
+        for (auto* q : { F, R }) if (q) q->endChangeGesture();
+        if (e.getDistanceFromDragStart() < 4 && T)   // a click without dragging: choose the filter type
+        {
+            juce::PopupMenu m; const int cur = juce::roundToInt(pget(T)); for (int i = 0; i < 14; ++i) m.addItem(i + 1, filterType(i).name, true, i == cur);
+            m.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(this), [this, safe = juce::Component::SafePointer<FilterDial>(this)](int r)
+                { if (safe != nullptr && r > 0 && T) { T->beginChangeGesture(); pset(T, (float) (r - 1)); T->endChangeGesture(); repaint(); } });
+        }
+    }
     void mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails& w) override { if (F) { F->beginChangeGesture(); pset(F, pget(F) + (w.deltaY > 0 ? 2.0f : -2.0f)); F->endChangeGesture(); } }
 private:
-    void tip() { setTooltip(title + ": " + filterType(juce::roundToInt(pget(T))).name + ", frequency " + juce::String(juce::roundToInt(pget(F))) + ", resonance " + juce::String(juce::roundToInt(pget(R))) + " (drag sideways = frequency, up or down = resonance; type order and Hz scale assumed)"); }
+    void tip() { setTooltip(title + ": " + filterType(juce::roundToInt(pget(T))).name + ", frequency " + juce::String(juce::roundToInt(pget(F))) + ", resonance " + juce::String(juce::roundToInt(pget(R))) + " (click = choose type, drag sideways = frequency, up or down = resonance; type order and Hz scale assumed)"); }
     juce::RangedAudioParameter *T, *F, *R; juce::Colour ring, curve; juce::String title; float last = -1, f0 = 0, r0 = 0;
+};
+
+// A text box of the mockup made into a drop-down list. The maker's document gives no value lists, so the controller value is taken as the position in the list (assumed).
+class Dropdown : public juce::Component, public juce::SettableTooltipClient
+{
+public:
+    Dropdown(juce::RangedAudioParameter* p, juce::StringArray opts, const TextRun& run, juce::Rectangle<float> box, const juce::String& name)
+        : param(p), options(std::move(opts)), font(run.font), col(run.col), title(name)
+    { setBounds(box.toNearestInt()); setMouseCursor(juce::MouseCursor::PointingHandCursor); tip(); }
+    juce::String text() const { const int v = juce::roundToInt(pget(param)); return v < options.size() ? options[v] : juce::String(v); }
+    void refresh() { if (text() != last) { repaint(); tip(); } }
+    void paint(juce::Graphics& g) override { last = text(); g.setColour(col); g.setFont(font); g.drawText(last, getLocalBounds().toFloat(), juce::Justification::centred, false); }
+    void mouseDown(const juce::MouseEvent&) override
+    {
+        if (!param) return; juce::PopupMenu m; const int cur = juce::roundToInt(pget(param));
+        for (int i = 0; i < options.size(); ++i) m.addItem(i + 1, options[i], true, i == cur);
+        m.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(this).withMinimumWidth(getWidth()), [this, safe = juce::Component::SafePointer<Dropdown>(this)](int r)
+            { if (safe != nullptr && r > 0 && param) { param->beginChangeGesture(); pset(param, (float) (r - 1)); param->endChangeGesture(); repaint(); } });
+    }
+private:
+    void tip() { setTooltip(title + ": " + text() + " (click to choose; the list order is assumed, not yet checked on a real UltraNova)"); }
+    juce::RangedAudioParameter* param; juce::StringArray options; juce::Font font; juce::Colour col; juce::String title, last;
 };
 
 // A knob wired to one parameter (or disabled at the mockup's resting angle when there is none).
@@ -459,11 +490,11 @@ class Content : public juce::Component, private juce::Timer
 public:
     std::function<void()> onZoom, onInfo, onAll, onReset100;
     Content(juce::AudioProcessor& p) : proc(p) { setSize(kW, kH); setOpaque(true); startTimerHz(20); }
-    ~Content() override { stopTimer(); knobs.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); filterDials.clear(); }
+    ~Content() override { stopTimer(); knobs.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); filterDials.clear(); dropdowns.clear(); }
 
     void showPage(const juce::String& key)
     {
-        knobs.clear(); dials.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); filterDials.clear(); live.clear(); skip.clear(); shown.clear(); picker.reset(); page = key; data = PageData::load(key); const auto& ids = knobMap().at(key);
+        knobs.clear(); dials.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); filterDials.clear(); dropdowns.clear(); live.clear(); skip.clear(); shown.clear(); picker.reset(); page = key; data = PageData::load(key); const auto& ids = knobMap().at(key);
         for (size_t i = 0; i < data->knobs.size(); ++i)
         {
             juce::RangedAudioParameter* prm = nullptr;
@@ -494,7 +525,8 @@ public:
             else if (r.t.length() >= 4 && (r.t.startsWith("LP") || r.t.startsWith("BP") || r.t.startsWith("HP")) && r.t.containsAnyOf("0123456789") && nf < 2) { if (auto* p = find(nf++ == 0 ? "cc_68" : "cc_82")) live[(int) i] = [p] { return juce::String(filterType(juce::roundToInt(pget(p))).name); }; }
             else if (r.t.endsWith(" Detune") && nc < 3) { if (auto* p = find(cents[nc++])) live[(int) i] = [p] { return Field::text(p, true) + " Detune"; }; }
         }
-        if (key == "filter") { bindMixerAndEnvelope(false); return; }
+        static const juce::StringArray drive { "Diode", "Valve", "Clipper", "XOver", "Rectify", "BitsDown", "RateDown" };   // names as in the maker's Distortion list
+        if (key == "filter") { bindMixerAndEnvelope(false); dropdown("Diode", "cc_65", drive, "Filter 1 drive type"); dropdown("XOver", "cc_81", drive, "Filter 2 drive type"); return; }
         if (key != "osc") return;
         auto box = [this](int run, const char* id, bool centred) {
             auto* p = find(id); if (!p) return; const auto& r = data->runs[(size_t) run]; skip.insert(run);
@@ -502,6 +534,16 @@ public:
         box(78, "cc_26", true); box(79, "cc_28", true); box(104, "cc_37", true); box(105, "cc_40", true); box(130, "cc_48", true); box(131, "cc_50", true);
         box(171, "cc_14", false);
         bindMixerAndEnvelope(true);
+        dropdown("Exponential", "cc_12", { "Linear", "Exponential" }, "Portamento mode"); dropdown("Mono Auto-Glide", "cc_3", { "Mono", "Mono Auto-Glide", "Polyphonic" }, "Polyphony mode");
+    }
+    void dropdown(const juce::String& boxText, const char* id, juce::StringArray opts, const juce::String& name)
+    {
+        auto* p = find(id); if (!p) return;
+        for (size_t i = 0; i < data->runs.size(); ++i) if (data->runs[i].t == boxText && !skip.count((int) i) && data->runs[i].r.getX() > 330)
+        {
+            const auto& r = data->runs[i]; skip.insert((int) i); auto d = std::make_unique<Dropdown>(p, opts, r, juce::Rectangle<float>(juce::jmax(56.0f, r.r.getWidth() + 18.0f), 18).withCentre(r.r.getCentre()), name);
+            addAndMakeVisible(*d); dropdowns.push_back(std::move(d)); return;
+        }
     }
     // Mixer faders, the six envelope bars and the envelope graph (same layout on the Oscillators page for the amp envelope and on the Filter page for the filter envelope).
     void bindMixerAndEnvelope(bool amp)
@@ -547,7 +589,7 @@ public:
     }
     void timerCallback() override
     {
-        for (auto& f : fields) f->refresh(); for (auto& f : faders) f->refresh(); for (auto& b : bars) b->refresh(); if (envGraph) envGraph->refresh(); for (auto& f : filterDials) f->refresh();
+        for (auto& f : fields) f->refresh(); for (auto& f : faders) f->refresh(); for (auto& b : bars) b->refresh(); if (envGraph) envGraph->refresh(); for (auto& f : filterDials) f->refresh(); for (auto& d : dropdowns) d->refresh();
         if (data) { auto sg = iconSignature(); if (sg != iconSig) { iconSig = sg; repaint(0, 0, 340, kH); } }
         for (auto& [i, fn] : live) { auto t = fn(); if (shown[i] != t) { shown[i] = t; repaint(data->runs[(size_t) i].r.expanded(8, 4).toNearestInt()); } }
     }
@@ -608,7 +650,7 @@ public:
     }
 private:
     juce::AudioProcessor& proc; KnobLook look; juce::String page; std::unique_ptr<PageData> data; std::vector<std::unique_ptr<Knob>> knobs; std::vector<std::unique_ptr<WaveDial>> dials; std::unique_ptr<WavePicker> picker;
-    std::vector<std::unique_ptr<Field>> fields; std::vector<std::unique_ptr<Fader>> faders; std::vector<std::unique_ptr<Bar>> bars; std::unique_ptr<EnvGraph> envGraph; std::vector<std::unique_ptr<FilterDial>> filterDials; std::map<int, std::function<juce::String()>> live; std::set<int> skip; std::map<int, juce::String> shown; juce::String iconSig;
+    std::vector<std::unique_ptr<Field>> fields; std::vector<std::unique_ptr<Fader>> faders; std::vector<std::unique_ptr<Bar>> bars; std::unique_ptr<EnvGraph> envGraph; std::vector<std::unique_ptr<FilterDial>> filterDials; std::vector<std::unique_ptr<Dropdown>> dropdowns; std::map<int, std::function<juce::String()>> live; std::set<int> skip; std::map<int, juce::String> shown; juce::String iconSig;
 };
 
 class Editor : public juce::AudioProcessorEditor

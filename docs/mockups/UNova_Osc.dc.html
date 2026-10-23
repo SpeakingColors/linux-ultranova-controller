@@ -295,6 +295,25 @@ function setupMix(){
       else if(drag.h===3){E.t=c(v.t+dx*127/(50*drag.k));bv[5]=E.t;drawB(5);}else E.r=c(v.r+dx*127/(70*drag.k));drawE();});
     env.addEventListener('pointerup',function(){drag=null;});env.title='Amp envelope: drag the dots (attack, decay and sustain level, sustain time, release)';drawE();}
 }
+
+// ---- drop-down lists for the text boxes (list order assumed, like in the plugin) ----
+var _menu=null;
+function openMenu(el,opts,cur,cb){
+  if(_menu){_menu.remove();_menu=null;}
+  var m=document.createElement('div'),r=el.getBoundingClientRect();
+  m.style.cssText='position:fixed;z-index:9999;background:#2B3038;border:1px solid #4B525F;border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.55);padding:4px 0;min-width:'+Math.max(r.width,110)+'px;max-height:70vh;overflow:auto;font:13px "Exo 2",system-ui,sans-serif;color:#E6E8EC;left:'+r.left+'px;top:'+(r.bottom+2)+'px';
+  opts.forEach(function(o,i){var b=document.createElement('div');b.textContent=(i===cur?'✓ ':' ')+o;b.style.cssText='padding:5px 12px;cursor:pointer;white-space:nowrap';
+    b.onmouseenter=function(){b.style.background='#3C4452';};b.onmouseleave=function(){b.style.background='';};
+    b.onclick=function(e){e.stopPropagation();m.remove();_menu=null;cb(i);};m.appendChild(b);});
+  document.body.appendChild(m);_menu=m;
+  setTimeout(function(){document.addEventListener('click',function h(){if(_menu){_menu.remove();_menu=null;}document.removeEventListener('click',h);},{once:true});},0);
+}
+function dropdownBox(text,opts,startIdx){
+  var el=[].slice.call(document.querySelectorAll('section span,div span')).filter(function(x){return x.children.length===0&&x.textContent.trim()===text&&/border/.test(x.getAttribute('style')||'')&&!x.closest('nav');})[0];
+  if(!el)return;var cur=startIdx;el.style.cursor='pointer';el.title='Click to choose (list order assumed)';
+  el.addEventListener('click',function(e){e.stopPropagation();openMenu(el,opts,cur,function(i){cur=i;el.textContent=opts[i];});});
+}
+setTimeout(function(){dropdownBox('Exponential',['Linear','Exponential'],1);dropdownBox('Mono Auto-Glide',['Mono','Mono Auto-Glide','Polyphonic'],1);},900);
 setTimeout(setupMix,900);
 })();
 </script>
