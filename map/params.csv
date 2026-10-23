@@ -49,11 +49,11 @@ cc_24,CC map,Osc1 Density,cc,24,0,0,127,0,assumed,0
 cc_88,CC map,Pan Mod Rate,cc,88,0,0,127,0,assumed,0
 cc_25,CC map,Osc1 Density Detune,cc,25,0,0,127,0,assumed,0
 cc_89,CC map,Pan Mod Rate Sync,cc,89,0,0,127,0,assumed,0
-cc_26,CC map,Osc1 Semitone Offset,cc,26,0,0,127,0,assumed,0
+cc_26,CC map,Osc1 Semitone Offset,cc,26,0,0,127,64,assumed,0
 cc_90,CC map,Pan Mod Depth,cc,90,0,0,127,0,assumed,0
-cc_27,CC map,Osc1 Cents Offset,cc,27,0,0,127,0,assumed,0
+cc_27,CC map,Osc1 Cents Offset,cc,27,0,0,127,64,assumed,0
 cc_91,CC map,FxSlot1 Level,cc,91,0,0,127,0,assumed,0
-cc_28,CC map,Osc1 Bendwheel > Pitch,cc,28,0,0,127,0,assumed,0
+cc_28,CC map,Osc1 Bendwheel > Pitch,cc,28,0,0,127,64,assumed,0
 cc_92,CC map,FxSlot2 Level,cc,92,0,0,127,0,assumed,0
 cc_29,CC map,Osc2 Waveform/WT/Audio,cc,29,0,0,127,0,assumed,0
 cc_93,CC map,FxSlot3 Level,cc,93,0,0,127,0,assumed,0
@@ -67,12 +67,12 @@ cc_35,CC map,Osc2 Density,cc,35,0,0,127,0,assumed,0
 cc_102,CC map,Pan L/R Phase Offset,cc,102,0,0,127,0,assumed,0
 cc_36,CC map,Osc2 Density Detune,cc,36,0,0,127,0,assumed,0
 cc_103,CC map,L/R Width Enhance,cc,103,0,0,127,0,assumed,0
-cc_37,CC map,Osc2 Semitone Offset,cc,37,0,0,127,0,assumed,0
+cc_37,CC map,Osc2 Semitone Offset,cc,37,0,0,127,64,assumed,0
 cc_104,CC map,Pan Spare,cc,104,0,0,127,0,assumed,0
 cc_105,CC map,Env Packed Mono/Multi Triggers,cc,105,0,0,127,0,assumed,0
-cc_39,CC map,Osc2 Cents Offset,cc,39,0,0,127,0,assumed,0
+cc_39,CC map,Osc2 Cents Offset,cc,39,0,0,127,64,assumed,0
 cc_106,CC map,Env Level Track Centre,cc,106,0,0,127,0,assumed,0
-cc_40,CC map,Osc2 Bendwheel > Pitch,cc,40,0,0,127,0,assumed,0
+cc_40,CC map,Osc2 Bendwheel > Pitch,cc,40,0,0,127,64,assumed,0
 cc_107,CC map,Drum Time,cc,107,0,0,127,0,assumed,0
 cc_41,CC map,Osc3 Waveform/WT/Audio,cc,41,0,0,127,0,assumed,0
 cc_108,CC map,AmpEnv Velocity,cc,108,0,0,127,0,assumed,0
@@ -88,11 +88,11 @@ cc_46,CC map,Osc3 Density,cc,46,0,0,127,0,assumed,0
 cc_113,CC map,AmpEnv Decay Track,cc,113,0,0,127,0,assumed,0
 cc_47,CC map,Osc3 Density Detune,cc,47,0,0,127,0,assumed,0
 cc_114,CC map,AmpEnv Level Track,cc,114,0,0,127,0,assumed,0
-cc_48,CC map,Osc3 Semitone Offset,cc,48,0,0,127,0,assumed,0
+cc_48,CC map,Osc3 Semitone Offset,cc,48,0,0,127,64,assumed,0
 cc_115,CC map,AmpEnv Attack Slope,cc,115,0,0,127,0,assumed,0
-cc_49,CC map,Osc3 Cents Offset,cc,49,0,0,127,0,assumed,0
+cc_49,CC map,Osc3 Cents Offset,cc,49,0,0,127,64,assumed,0
 cc_116,CC map,AmpEnv Decay Slope,cc,116,0,0,127,0,assumed,0
-cc_50,CC map,Osc3 Bendwheel > Pitch,cc,50,0,0,127,0,assumed,0
+cc_50,CC map,Osc3 Bendwheel > Pitch,cc,50,0,0,127,64,assumed,0
 cc_117,CC map,AmpEnv Touch Trigger,cc,117,0,0,127,0,assumed,0
 cc_51,CC map,Osc1 Mix Level,cc,51,0,0,127,0,assumed,0
 cc_52,CC map,Osc2 Mix Level,cc,52,0,0,127,0,assumed,0

@@ -3,6 +3,8 @@
 // the live controls sit (assets/ui/<page>.json). This file draws the artwork and puts real controls on top.
 // Controls that are not wired to a parameter yet are drawn disabled and listed in kKnobMap with an empty id.
 #pragma once
+#include <map>
+#include <set>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <functional>
 #include <map>
@@ -73,13 +75,14 @@ inline juce::Font makeFont(int weight, bool vt, float px) { return juce::Font(ju
 inline float textWidth(const juce::Font& f, const juce::String& t) { juce::GlyphArrangement ga; ga.addLineOfText(f, t, 0, 0); return ga.getBoundingBox(0, -1, true).getWidth(); }
 
 struct TextRun { juce::String t; juce::Rectangle<float> r; juce::Font font; juce::Colour col; int rot = 0; };
+struct IconSpec { int n = 1; juce::Rectangle<float> rect; juce::Colour color; };
 struct DialSpec { juce::Rectangle<float> rect; juce::Colour color; };
 struct KnobSpec { juce::Rectangle<float> rect; float angle = 0; };
 struct NavSpec { juce::String page; juce::Rectangle<float> rect; };
 struct ButtonSpec { juce::String text, label; juce::Rectangle<float> rect; };
 struct PageData
 {
-    juce::Image art; std::vector<KnobSpec> knobs; std::vector<NavSpec> nav; std::vector<ButtonSpec> buttons; std::vector<TextRun> runs; std::vector<DialSpec> dials;
+    juce::Image art; std::vector<KnobSpec> knobs; std::vector<NavSpec> nav; std::vector<ButtonSpec> buttons; std::vector<TextRun> runs; std::vector<DialSpec> dials; std::vector<IconSpec> icons;
     static std::unique_ptr<PageData> load(const juce::String& key)
     {
         auto pd = std::make_unique<PageData>(); auto png = resource(key + ".png"); auto js = resource(key + ".json");
@@ -99,6 +102,7 @@ struct PageData
             pd->runs.push_back(std::move(tr));
         }
         if (auto* ds = v["dials"].getArray()) for (auto& d : *ds) pd->dials.push_back({ rectOf(d), juce::Colour::fromString("ff" + d["color"].toString().fromFirstOccurrenceOf("#", false, false)) });
+        if (auto* is = v["navIcons"].getArray()) for (auto& d : *is) pd->icons.push_back({ (int) d["n"], rectOf(d), juce::Colour::fromString("ff" + d["color"].toString().fromFirstOccurrenceOf("#", false, false)) });
         return pd;
     }
 };
@@ -159,10 +163,17 @@ inline std::function<float(float)> waveFn(int i)
     float m = 0.0001f; for (int q = 0; q < 64; ++q) m = juce::jmax(m, std::abs(eval((float) q / 64.0f)));
     return [=](float t) { return eval(t) / m; };
 }
-inline juce::Path wavePath(int i, juce::Rectangle<float> r)
+// amount 0..1 is the Pulsewidth/WT index control: it sets the duty of the Pulse wave and morphs a wavetable toward the next one (illustrative, like the tables).
+inline juce::Path wavePath(int i, juce::Rectangle<float> r, float amount = -1.0f)
 {
-    juce::Path p; auto f = waveFn(i);
-    for (int k = 0; k <= 48; ++k) { const float t = (float) k / 48.0f, x = r.getX() + t * r.getWidth(), y = r.getCentreY() - f(t) * r.getHeight() / 2; if (k) p.lineTo(x, y); else p.startNewSubPath(x, y); }
+    juce::Path p; auto f = waveFn(i); auto f2 = (amount >= 0.0f && i >= 6 && i < 41) ? waveFn(i + 1) : f;
+    const float duty = 0.05f + 0.9f * juce::jlimit(0.0f, 1.0f, amount < 0.0f ? 0.25f : amount);
+    for (int k = 0; k <= 48; ++k)
+    {
+        const float t = (float) k / 48.0f, x = r.getX() + t * r.getWidth();
+        float v = f(t); if (amount >= 0.0f) { if (i == 5) v = t < duty ? 1.0f : -1.0f; else if (i >= 6 && i < 41) v += (f2(t) - v) * amount; }
+        const float y = r.getCentreY() - v * r.getHeight() / 2; if (k) p.lineTo(x, y); else p.startNewSubPath(x, y);
+    }
     return p;
 }
 
@@ -176,6 +187,10 @@ public:
         setMouseCursor(juce::MouseCursor::PointingHandCursor); setTooltip("Click to choose a waveform (value meanings are assumed, not yet checked on a real UltraNova)");
         if (p) { attach = std::make_unique<juce::ParameterAttachment>(*p, [this](float v) { index = juce::jlimit(0, waveCount() - 1, juce::roundToInt(v)); repaint(); }); attach->sendInitialUpdate(); }
     }
+    void followShape(juce::RangedAudioParameter* q)
+    {
+        if (!q) return; shapeAttach = std::make_unique<juce::ParameterAttachment>(*q, [this, q](float v) { amount = juce::jlimit(0.0f, 1.0f, q->convertTo0to1(v)); repaint(); }); shapeAttach->sendInitialUpdate();
+    }
     void choose(int i) { index = i; if (attach) attach->setValueAsCompleteGesture((float) i); repaint(); }
     int current() const { return index; }
     juce::Colour colour;
@@ -188,12 +203,12 @@ public:
         auto cg = juce::ColourGradient(juce::Colour(0xff0A0A0B), c.x, c.y, colour.withAlpha(0.55f), c.x + 28 * u, c.y, true); cg.addColour(0.6, juce::Colour(0xff0A0A0B)); g.setGradientFill(cg);
         g.fillEllipse(c.x - 28 * u, c.y - 28 * u, 56 * u, 56 * u); g.setColour(colour); g.drawEllipse(c.x - 28 * u, c.y - 28 * u, 56 * u, 56 * u, 1.2f * u);
         g.setColour(juce::Colour(0xff0B0C0E)); g.fillEllipse(c.x - 18 * u, c.y - 18 * u, 36 * u, 36 * u); g.setColour(juce::Colour(0xff3A3D44)); g.drawEllipse(c.x - 18 * u, c.y - 18 * u, 36 * u, 36 * u, u);
-        g.setColour(colour); g.strokePath(wavePath(index, { at(14, 22).x, at(14, 22).y, 36 * u, 22 * u }), juce::PathStrokeType(2.4f * u, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        g.setColour(colour); g.strokePath(wavePath(index, { at(14, 22).x, at(14, 22).y, 36 * u, 22 * u }, amount), juce::PathStrokeType(2.4f * u, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
         g.setFont(makeFont(400, false, 5.0f * u)); g.drawText(waveName(index).toLowerCase(), juce::Rectangle<float>(c.x - 26 * u, c.y + 20 * u, 52 * u, 8 * u), juce::Justification::centred, false);
     }
     void mouseDown(const juce::MouseEvent&) override { if (onOpen) onOpen(*this); }
 private:
-    juce::RangedAudioParameter* param; std::unique_ptr<juce::ParameterAttachment> attach; int index = 2;
+    juce::RangedAudioParameter* param; std::unique_ptr<juce::ParameterAttachment> attach, shapeAttach; int index = 2; float amount = -1.0f;
 };
 
 // The pop-up grid: one tile per waveform with its number, name and shape.
@@ -227,6 +242,34 @@ private:
     int hit(juce::Point<int> p) const { for (int i = 0; i < waveCount(); ++i) if (tile(i).contains(p)) return i; return -1; }
 };
 
+// A value box of the mockup made live: shows one controller value, drag up/down or use the wheel to change it, double click resets.
+// The maker's document gives no ranges, so it shows the plain controller number (centred ones as minus 64 to plus 63).
+class Field : public juce::Component, public juce::SettableTooltipClient
+{
+public:
+    Field(juce::RangedAudioParameter* p, bool centred, const TextRun& run, juce::Rectangle<float> box) : param(p), centre(centred), font(run.font), col(run.col)
+    {
+        setBounds(box.toNearestInt()); setMouseCursor(juce::MouseCursor::UpDownResizeCursor);
+        setTooltip(p ? p->getName(60) + ": drag up or down, wheel, double click resets. Shows the plain controller value (range not in the maker's document)" : "");
+    }
+    static juce::String text(juce::RangedAudioParameter* p, bool centred)
+    {
+        if (!p) return "-"; const int v = juce::roundToInt(p->convertFrom0to1(p->getValue()));
+        return centred ? (v - 64 >= 0 ? "+" : "") + juce::String(v - 64) : juce::String(v);
+    }
+    void paint(juce::Graphics& g) override { last = text(param, centre); g.setColour(col); g.setFont(font); g.drawText(last, getLocalBounds().toFloat(), juce::Justification::centred, false); }
+    void refresh() { if (text(param, centre) != last) repaint(); }
+    void mouseDown(const juce::MouseEvent&) override { if (param) { start = param->convertFrom0to1(param->getValue()); param->beginChangeGesture(); } }
+    void mouseDrag(const juce::MouseEvent& e) override { set(start - (float) e.getDistanceFromDragStartY() / 2.0f); }
+    void mouseUp(const juce::MouseEvent&) override { if (param) param->endChangeGesture(); }
+    void mouseDoubleClick(const juce::MouseEvent&) override { if (param) { param->beginChangeGesture(); set(centre ? 64.0f : 0.0f); param->endChangeGesture(); } }
+    void mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails& w) override
+    { if (param) { param->beginChangeGesture(); set(param->convertFrom0to1(param->getValue()) + (w.deltaY > 0 ? 1.0f : -1.0f)); param->endChangeGesture(); } }
+private:
+    void set(float v) { if (!param) return; param->setValueNotifyingHost(param->convertTo0to1(juce::jlimit(0.0f, 127.0f, std::round(v)))); repaint(); }
+    juce::RangedAudioParameter* param; bool centre; juce::Font font; juce::Colour col; float start = 0; juce::String last;
+};
+
 // A knob wired to one parameter (or disabled at the mockup's resting angle when there is none).
 class Knob : public juce::Slider
 {
@@ -251,16 +294,16 @@ private:
 };
 
 // The page: artwork at the back, knobs on top, menu on the left, buttons in the header.
-class Content : public juce::Component
+class Content : public juce::Component, private juce::Timer
 {
 public:
     std::function<void()> onZoom, onInfo, onAll, onReset100;
-    Content(juce::AudioProcessor& p) : proc(p) { setSize(kW, kH); setOpaque(true); }
-    ~Content() override { knobs.clear(); }
+    Content(juce::AudioProcessor& p) : proc(p) { setSize(kW, kH); setOpaque(true); startTimerHz(20); }
+    ~Content() override { stopTimer(); knobs.clear(); fields.clear(); }
 
     void showPage(const juce::String& key)
     {
-        knobs.clear(); dials.clear(); picker.reset(); page = key; data = PageData::load(key); const auto& ids = knobMap().at(key);
+        knobs.clear(); dials.clear(); fields.clear(); live.clear(); skip.clear(); shown.clear(); picker.reset(); page = key; data = PageData::load(key); const auto& ids = knobMap().at(key);
         for (size_t i = 0; i < data->knobs.size(); ++i)
         {
             juce::RangedAudioParameter* prm = nullptr;
@@ -272,9 +315,53 @@ public:
         for (size_t i = 0; i < data->dials.size() && i < 3; ++i)
         {
             juce::RangedAudioParameter* prm = nullptr; for (auto* q : proc.getParameters()) if (auto* r = dynamic_cast<juce::RangedAudioParameter*>(q)) if (r->paramID == waveIds[i]) { prm = r; break; }
-            auto d = std::make_unique<WaveDial>(prm, data->dials[i].color); d->setBounds(data->dials[i].rect.toNearestInt()); d->onOpen = [this](WaveDial& wd) { openPicker(wd); }; addAndMakeVisible(*d); dials.push_back(std::move(d));
+            auto d = std::make_unique<WaveDial>(prm, data->dials[i].color); static const char* pwIds[3] = { "cc_21", "cc_31", "cc_43" }; d->followShape(find(pwIds[i])); d->setBounds(data->dials[i].rect.toNearestInt()); d->onOpen = [this](WaveDial& wd) { openPicker(wd); }; addAndMakeVisible(*d); dials.push_back(std::move(d));
         }
-        repaint();
+        bindLive(key); repaint();
+    }
+    juce::RangedAudioParameter* find(const juce::String& id) const
+    { for (auto* q : proc.getParameters()) if (auto* r = dynamic_cast<juce::RangedAudioParameter*>(q)) if (r->paramID == id) return r; return nullptr; }
+    // Text of the page that follows a control: value boxes (Field) and summary lines. Oscillators page first.
+    void bindLive(const juce::String& key)
+    {
+        if (!data) return;
+        // the menu rows "Oscillator 1..3" show semitone and cents of that oscillator, on every page
+        static const char* semi[3] = { "cc_26", "cc_37", "cc_48" }; static const char* cents[3] = { "cc_27", "cc_39", "cc_49" }; int ns = 0, nc = 0;
+        for (size_t i = 0; i < data->runs.size(); ++i)
+        {
+            const auto& r = data->runs[i]; if (r.r.getX() > 330) continue;
+            if (r.t.endsWith(" Semi") && ns < 3) { if (auto* p = find(semi[ns++])) live[(int) i] = [p] { return Field::text(p, true) + " Semi"; }; }
+            else if (r.t.endsWith(" Detune") && nc < 3) { if (auto* p = find(cents[nc++])) live[(int) i] = [p] { return Field::text(p, true) + " Detune"; }; }
+        }
+        if (key != "osc") return;
+        auto box = [this](int run, const char* id, bool centred) {
+            auto* p = find(id); if (!p) return; const auto& r = data->runs[(size_t) run]; skip.insert(run);
+            auto f = std::make_unique<Field>(p, centred, r, juce::Rectangle<float>(40, 20).withCentre(r.r.getCentre())); addAndMakeVisible(*f); fields.push_back(std::move(f)); };
+        box(78, "cc_26", true); box(79, "cc_28", true); box(104, "cc_37", true); box(105, "cc_40", true); box(130, "cc_48", true); box(131, "cc_50", true);
+        box(171, "cc_14", false);
+    }
+    // the little waveform in the menu rows follows the waveform and pulse width of its oscillator
+    juce::String iconSignature() const
+    {
+        static const char* w[3] = { "cc_19", "cc_29", "cc_41" }; static const char* pw[3] = { "cc_21", "cc_31", "cc_43" }; juce::String sig;
+        for (int i = 0; i < 3; ++i) { if (auto* a = find(w[i])) sig << juce::roundToInt(a->convertFrom0to1(a->getValue())) << ","; if (auto* b = find(pw[i])) sig << juce::roundToInt(b->convertFrom0to1(b->getValue())) << ";"; }
+        return sig;
+    }
+    void paintIcons(juce::Graphics& g)
+    {
+        static const char* w[3] = { "cc_19", "cc_29", "cc_41" }; static const char* pw[3] = { "cc_21", "cc_31", "cc_43" };
+        for (auto& ic : data->icons)
+        {
+            if (ic.n < 1 || ic.n > 3) continue; auto* a = find(w[ic.n - 1]); auto* b = find(pw[ic.n - 1]);
+            const int idx = a ? juce::jlimit(0, waveCount() - 1, juce::roundToInt(a->convertFrom0to1(a->getValue()))) : 2; const float amt = b ? b->getValue() : -1.0f;
+            g.setColour(ic.color); g.strokePath(wavePath(idx, ic.rect.reduced(2, 2), amt), juce::PathStrokeType(1.6f));
+        }
+    }
+    void timerCallback() override
+    {
+        for (auto& f : fields) f->refresh();
+        if (data) { auto sg = iconSignature(); if (sg != iconSig) { iconSig = sg; for (auto& ic : data->icons) repaint(ic.rect.expanded(3).toNearestInt()); } }
+        for (auto& [i, fn] : live) { auto t = fn(); if (shown[i] != t) { shown[i] = t; repaint(data->runs[(size_t) i].r.expanded(8, 4).toNearestInt()); } }
     }
     void openPicker(WaveDial& wd)
     {
@@ -289,13 +376,15 @@ public:
     {
         g.fillAll(juce::Colour(0xff0B0B0C));
         if (data && data->art.isValid()) { g.setImageResamplingQuality(juce::Graphics::highResamplingQuality); g.drawImage(data->art, 0, 0, kW, kH, 0, 0, data->art.getWidth(), data->art.getHeight()); }
-        if (data) for (auto& r : data->runs)
+        if (data) for (size_t ri = 0; ri < data->runs.size(); ++ri)
         {
+            auto& r = data->runs[ri]; if (skip.count((int) ri)) continue; auto lv = live.find((int) ri); const juce::String txt = lv != live.end() ? lv->second() : r.t;
             g.setColour(r.col); g.setFont(r.font);
             if (r.rot % 180 != 0) { const auto c = r.r.getCentre(); g.saveState(); g.addTransform(juce::AffineTransform::rotation(juce::degreesToRadians((float) r.rot), c.x, c.y));
-                g.drawText(r.t, juce::Rectangle<float>(r.r.getHeight(), r.r.getWidth()).withCentre(c), juce::Justification::centred, false); g.restoreState(); }
-            else g.drawText(r.t, r.r, juce::Justification::centred, false);
+                g.drawText(txt, juce::Rectangle<float>(r.r.getHeight(), r.r.getWidth()).withCentre(c), juce::Justification::centred, false); g.restoreState(); }
+            else g.drawText(txt, r.r.expanded(10, 0), juce::Justification::centred, false);
         }
+        if (data) paintIcons(g);
         paintWood(g, { 0, 0, kCheek, kH }, true); paintWood(g, { kW - kCheek, 0, kCheek, kH }, false);   // the PurrOne wood, drawn over the cheeks baked into the artwork
     }
     // The wood of the PurrOne mockup: fine vertical grain, dark at both edges and lit in the middle like a rounded cheek.
@@ -330,6 +419,7 @@ public:
     }
 private:
     juce::AudioProcessor& proc; KnobLook look; juce::String page; std::unique_ptr<PageData> data; std::vector<std::unique_ptr<Knob>> knobs; std::vector<std::unique_ptr<WaveDial>> dials; std::unique_ptr<WavePicker> picker;
+    std::vector<std::unique_ptr<Field>> fields; std::map<int, std::function<juce::String()>> live; std::set<int> skip; std::map<int, juce::String> shown; juce::String iconSig;
 };
 
 class Editor : public juce::AudioProcessorEditor

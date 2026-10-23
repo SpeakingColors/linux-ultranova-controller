@@ -67,7 +67,11 @@ TEXTJS = r"""() => {
   }
   const dials = [...document.querySelectorAll('[data-wavedial] svg[aria-label^="Waveform"]')].map(sv => { const b = sv.getBoundingClientRect(); const pa = sv.querySelector('path[stroke]');
     sv.style.visibility = 'hidden'; return { x: +(b.left - rb.left).toFixed(1), y: +(b.top - rb.top).toFixed(1), w: +b.width.toFixed(1), h: +b.height.toFixed(1), color: pa ? pa.getAttribute('stroke') : '#7EE3E8', label: sv.getAttribute('aria-label') }; });
-  return { runs, dials };
+  // the little waveform icon of the Oscillator 1..3 menu rows: hidden here, the plugin draws it from the real waveform
+  const navIcons = []; document.querySelectorAll('nav a[href]').forEach(a => { const sp = a.querySelector('span'); const m = /^Oscillator (\d)$/.exec(sp ? sp.textContent.trim() : '');
+    const sv = m && a.querySelector('svg'); if (!sv) return; const b = sv.getBoundingClientRect(); const pa = sv.querySelector('path[stroke]');
+    navIcons.push({ n: +m[1], x: +(b.left - rb.left).toFixed(1), y: +(b.top - rb.top).toFixed(1), w: +b.width.toFixed(1), h: +b.height.toFixed(1), color: pa ? pa.getAttribute('stroke') : '#7EE3E8' }); sv.style.visibility = 'hidden'; });
+  return { runs, dials, navIcons };
 }"""
 HIDE_TEXT = "*{color:transparent !important;text-shadow:none !important;-webkit-text-fill-color:transparent !important} svg text{display:none !important}"
 
@@ -77,7 +81,7 @@ with sync_playwright() as p:
         pg.goto("file://%s/docs/mockups/%s.dc.html" % (root, name)); pg.add_style_tag(content=FONTS)
         pg.wait_for_timeout(1500); pg.evaluate("document.fonts.ready"); pg.wait_for_timeout(500)
         info = pg.evaluate(JS, [760, 1348])
-        tx = pg.evaluate(TEXTJS); info["runs"] = tx["runs"]; info["dials"] = tx["dials"]
+        tx = pg.evaluate(TEXTJS); info["runs"] = tx["runs"]; info["dials"] = tx["dials"]; info["navIcons"] = tx["navIcons"]
         pg.add_style_tag(content=HIDE_TEXT); pg.wait_for_timeout(200)
         el = pg.query_selector("x-dc > :last-child")
         el.screenshot(path=os.path.join(root, "assets/ui/%s.png" % key))
