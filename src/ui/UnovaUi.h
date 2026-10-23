@@ -82,7 +82,7 @@ struct NavSpec { juce::String page; juce::Rectangle<float> rect; };
 struct ButtonSpec { juce::String text, label; juce::Rectangle<float> rect; };
 struct PageData
 {
-    juce::Image art; std::vector<KnobSpec> knobs; std::vector<NavSpec> nav; std::vector<ButtonSpec> buttons; std::vector<TextRun> runs; std::vector<DialSpec> dials; std::vector<IconSpec> icons;
+    juce::Image art; std::vector<KnobSpec> knobs; std::vector<NavSpec> nav; std::vector<ButtonSpec> buttons; std::vector<TextRun> runs; std::vector<DialSpec> dials; std::vector<IconSpec> icons; std::vector<juce::Rectangle<float>> navBars, faders, bars; juce::Rectangle<float> env;
     static std::unique_ptr<PageData> load(const juce::String& key)
     {
         auto pd = std::make_unique<PageData>(); auto png = resource(key + ".png"); auto js = resource(key + ".json");
@@ -103,6 +103,8 @@ struct PageData
         }
         if (auto* ds = v["dials"].getArray()) for (auto& d : *ds) pd->dials.push_back({ rectOf(d), juce::Colour::fromString("ff" + d["color"].toString().fromFirstOccurrenceOf("#", false, false)) });
         if (auto* is = v["navIcons"].getArray()) for (auto& d : *is) pd->icons.push_back({ (int) d["n"], rectOf(d), juce::Colour::fromString("ff" + d["color"].toString().fromFirstOccurrenceOf("#", false, false)) });
+        auto list = [&](const char* k, std::vector<juce::Rectangle<float>>& out) { if (auto* a = v[k].getArray()) for (auto& r : *a) out.push_back(rectOf(r)); };
+        list("navBars", pd->navBars); list("faders", pd->faders); list("bars", pd->bars); if (v["env"].isObject()) pd->env = rectOf(v["env"]);
         return pd;
     }
 };
@@ -270,6 +272,113 @@ private:
     juce::RangedAudioParameter* param; bool centre; juce::Font font; juce::Colour col; float start = 0; juce::String last;
 };
 
+inline float pget(juce::RangedAudioParameter* p) { return p ? p->convertFrom0to1(p->getValue()) : 0.0f; }
+inline void pset(juce::RangedAudioParameter* p, float v) { if (p) p->setValueNotifyingHost(p->convertTo0to1(juce::jlimit(0.0f, 127.0f, std::round(v)))); }
+
+// A mixer fader of the Oscillators page: drag it or use the wheel; double click sets 0. Shows the plain controller value in its tooltip.
+class Fader : public juce::Component, public juce::SettableTooltipClient
+{
+public:
+    Fader(juce::RangedAudioParameter* p, const juce::String& name, juce::Rectangle<float> box) : param(p), title(name), track(box)
+    { setBounds(box.expanded(9, 3).toNearestInt()); setMouseCursor(juce::MouseCursor::UpDownResizeCursor); tip(); }
+    void refresh() { if (pget(param) != last) { repaint(); tip(); } }
+    void paint(juce::Graphics& g) override
+    {
+        last = pget(param); const auto r = track.translated(-(float) getX(), -(float) getY());
+        g.setColour(juce::Colour(0xff222222)); g.fillRect(r); g.setColour(juce::Colour(0xff444444)); g.drawRect(r, 1.0f);
+        const auto in = r.reduced(1.0f); const float h = juce::jmax(2.0f, in.getHeight() * last / 127.0f); const auto f = juce::Rectangle<float>(in.getX(), in.getBottom() - h, in.getWidth(), h);
+        if (last <= 0.0f) { g.setColour(juce::Colour(0xff333333)); g.fillRect(f); }
+        else { g.setGradientFill(juce::ColourGradient(juce::Colour(0xff4BE38A), 0, in.getBottom(), juce::Colour(0xffC8FFD9), 0, in.getY(), false)); g.fillRect(f); }
+    }
+    void mouseDown(const juce::MouseEvent& e) override { if (param) { param->beginChangeGesture(); at(e); } }
+    void mouseDrag(const juce::MouseEvent& e) override { at(e); }
+    void mouseUp(const juce::MouseEvent&) override { if (param) param->endChangeGesture(); }
+    void mouseDoubleClick(const juce::MouseEvent&) override { if (param) { param->beginChangeGesture(); pset(param, 0); param->endChangeGesture(); } }
+    void mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails& w) override { if (param) { param->beginChangeGesture(); pset(param, pget(param) + (w.deltaY > 0 ? 2.0f : -2.0f)); param->endChangeGesture(); } }
+private:
+    void at(const juce::MouseEvent& e) { const auto t = track.translated(-(float) getX(), -(float) getY()).reduced(1.0f); pset(param, 127.0f * (t.getBottom() - e.position.y) / t.getHeight()); }
+    void tip() { setTooltip(title + ": " + juce::String(juce::roundToInt(pget(param))) + " (drag, wheel, double click sets 0; plain controller value)"); }
+    juce::RangedAudioParameter* param; juce::String title; juce::Rectangle<float> track; float last = -1;
+};
+
+// A thin horizontal slider of the envelope panel (the bars next to the graph).
+class Bar : public juce::Component, public juce::SettableTooltipClient
+{
+public:
+    Bar(juce::RangedAudioParameter* p, const juce::String& name, juce::Rectangle<float> box) : param(p), title(name), track(box)
+    { setBounds(box.expanded(0, 5).toNearestInt()); setMouseCursor(juce::MouseCursor::LeftRightResizeCursor); tip(); }
+    void refresh() { if (pget(param) != last) { repaint(); tip(); } }
+    void paint(juce::Graphics& g) override
+    {
+        last = pget(param); const auto r = track.translated(-(float) getX(), -(float) getY());
+        g.setColour(juce::Colour(0xff2C3B52)); g.fillRect(r); g.setColour(juce::Colour(0xffE6E8EC)); g.fillRect(r.withWidth(r.getWidth() * last / 127.0f));
+    }
+    void mouseDown(const juce::MouseEvent& e) override { if (param) { param->beginChangeGesture(); at(e); } }
+    void mouseDrag(const juce::MouseEvent& e) override { at(e); }
+    void mouseUp(const juce::MouseEvent&) override { if (param) param->endChangeGesture(); }
+    void mouseDoubleClick(const juce::MouseEvent&) override { if (param) { param->beginChangeGesture(); pset(param, param->convertFrom0to1(param->getDefaultValue())); param->endChangeGesture(); } }
+    void mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails& w) override { if (param) { param->beginChangeGesture(); pset(param, pget(param) + (w.deltaY > 0 ? 2.0f : -2.0f)); param->endChangeGesture(); } }
+private:
+    void at(const juce::MouseEvent& e) { pset(param, 127.0f * (e.position.x - (track.getX() - (float) getX())) / track.getWidth()); }
+    void tip() { setTooltip(title + ": " + juce::String(juce::roundToInt(pget(param))) + " (drag, wheel, double click resets; plain controller value)"); }
+    juce::RangedAudioParameter* param; juce::String title; juce::Rectangle<float> track; float last = -1;
+};
+
+// The amp envelope graph. Attack, decay, sustain level, sustain time and release come from the controllers; drag the four dots to change them.
+// Segment lengths are drawn illustratively (the maker's document gives no time scale).
+class EnvGraph : public juce::Component, public juce::SettableTooltipClient
+{
+public:
+    EnvGraph(juce::RangedAudioParameter* a, juce::RangedAudioParameter* d, juce::RangedAudioParameter* s, juce::RangedAudioParameter* st, juce::RangedAudioParameter* r, juce::Rectangle<float> box)
+        : A(a), D(d), S(s), ST(st), R(r) { setBounds(box.toNearestInt()); }
+    void refresh() { const auto sig = sig5(); if (sig != last) { last = sig; repaint(); } }
+    void paint(juce::Graphics& g) override
+    {
+        last = sig5(); const auto b = getLocalBounds().toFloat().reduced(0.5f);
+        g.setColour(juce::Colour(0xff0A1626)); g.fillRoundedRectangle(b, 6); g.setColour(juce::Colour(0xff4E5F86)); g.drawRoundedRectangle(b, 6, 1);
+        const auto p = pts(); juce::Path path; path.startNewSubPath(p[0]); for (int i = 1; i < 5; ++i) path.lineTo(p[(size_t) i]);
+        const float dash[2] = { 3, 3 }; g.setColour(juce::Colour(0xff2C3B52));
+        for (int i = 1; i <= 3; ++i) { juce::Line<float> l(p[(size_t) i].x, 6, p[(size_t) i].x, (float) getHeight() - 6); juce::Path dl; juce::PathStrokeType(1).createDashedStroke(dl, juce::Path(), dash, 2); g.drawDashedLine(l, dash, 2, 1.0f); }
+        g.setColour(juce::Colour(0xff7EE3E8)); g.strokePath(path, juce::PathStrokeType(2.0f));
+        for (int i = 1; i <= 4; ++i) { g.setColour(juce::Colour(0xff0D1B2E)); g.fillEllipse(p[(size_t) i].x - 3.5f, p[(size_t) i].y - 3.5f, 7, 7); g.setColour(juce::Colour(0xff7EE3E8)); g.drawEllipse(p[(size_t) i].x - 3.5f, p[(size_t) i].y - 3.5f, 7, 7, 1.6f); }
+    }
+    void mouseMove(const juce::MouseEvent& e) override
+    {
+        const int h = hit(e.position); setMouseCursor(h > 0 ? juce::MouseCursor::DraggingHandCursor : juce::MouseCursor::NormalCursor);
+        static const char* nm[5] = { "", "Attack time, drag left or right", "Decay time and sustain level, drag", "Sustain time, drag left or right", "Release time, drag left or right" };
+        setTooltip(h > 0 ? juce::String(nm[h]) + " (plain controller values, time scale illustrative)" : "Amp envelope");
+    }
+    void mouseDown(const juce::MouseEvent& e) override
+    {
+        grab = hit(e.position); if (grab < 1) return; start = e.position; v0 = { pget(A), pget(D), pget(S), pget(ST), pget(R) }; k0 = scale();
+        for (auto* q : { A, D, S, ST, R }) if (q) q->beginChangeGesture();
+    }
+    void mouseDrag(const juce::MouseEvent& e) override
+    {
+        if (grab < 1) return; const float dx = e.position.x - start.x, dy = e.position.y - start.y; const float perX = 127.0f / (70.0f * k0), perXs = 127.0f / (50.0f * k0);
+        if (grab == 1) pset(A, v0[0] + dx * perX);
+        else if (grab == 2) { pset(D, v0[1] + dx * perX); pset(S, v0[2] - dy * 127.0f / (float) (getHeight() - 26)); }
+        else if (grab == 3) pset(ST, v0[3] + dx * perXs);
+        else pset(R, v0[4] + dx * perX);
+    }
+    void mouseUp(const juce::MouseEvent&) override { if (grab > 0) for (auto* q : { A, D, S, ST, R }) if (q) q->endChangeGesture(); grab = 0; }
+private:
+    float scale() const
+    {
+        const float wa = 24 + pget(A) / 127 * 70, wd = 24 + pget(D) / 127 * 70, ws = 24 + pget(ST) / 127 * 50, wr = 24 + pget(R) / 127 * 70;
+        return juce::jmin(1.0f, ((float) getWidth() - 30.0f) / (wa + wd + ws + wr));
+    }
+    std::array<juce::Point<float>, 5> pts() const
+    {
+        const float k = scale(), left = 10, top = 10, bottom = (float) getHeight() - 16, yS = bottom - pget(S) / 127 * (bottom - top);
+        const float x1 = left + (24 + pget(A) / 127 * 70) * k, x2 = x1 + (24 + pget(D) / 127 * 70) * k, x3 = x2 + (24 + pget(ST) / 127 * 50) * k, x4 = x3 + (24 + pget(R) / 127 * 70) * k;
+        return { juce::Point<float>(left, bottom), { x1, top }, { x2, yS }, { x3, yS }, { x4, bottom } };
+    }
+    int hit(juce::Point<float> m) const { const auto p = pts(); for (int i = 4; i >= 1; --i) if (p[(size_t) i].getDistanceFrom(m) < 9.0f) return i; return 0; }
+    float sig5() const { return pget(A) + pget(D) * 131 + pget(S) * 17011 + pget(ST) * 997 + pget(R) * 10007; }
+    juce::RangedAudioParameter *A, *D, *S, *ST, *R; float last = -1, k0 = 1; int grab = 0; juce::Point<float> start; std::array<float, 5> v0{};
+};
+
 // A knob wired to one parameter (or disabled at the mockup's resting angle when there is none).
 class Knob : public juce::Slider
 {
@@ -299,11 +408,11 @@ class Content : public juce::Component, private juce::Timer
 public:
     std::function<void()> onZoom, onInfo, onAll, onReset100;
     Content(juce::AudioProcessor& p) : proc(p) { setSize(kW, kH); setOpaque(true); startTimerHz(20); }
-    ~Content() override { stopTimer(); knobs.clear(); fields.clear(); }
+    ~Content() override { stopTimer(); knobs.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); }
 
     void showPage(const juce::String& key)
     {
-        knobs.clear(); dials.clear(); fields.clear(); live.clear(); skip.clear(); shown.clear(); picker.reset(); page = key; data = PageData::load(key); const auto& ids = knobMap().at(key);
+        knobs.clear(); dials.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); live.clear(); skip.clear(); shown.clear(); picker.reset(); page = key; data = PageData::load(key); const auto& ids = knobMap().at(key);
         for (size_t i = 0; i < data->knobs.size(); ++i)
         {
             juce::RangedAudioParameter* prm = nullptr;
@@ -339,17 +448,28 @@ public:
             auto f = std::make_unique<Field>(p, centred, r, juce::Rectangle<float>(40, 20).withCentre(r.r.getCentre())); addAndMakeVisible(*f); fields.push_back(std::move(f)); };
         box(78, "cc_26", true); box(79, "cc_28", true); box(104, "cc_37", true); box(105, "cc_40", true); box(130, "cc_48", true); box(131, "cc_50", true);
         box(171, "cc_14", false);
+        static const char* mix[6] = { "cc_51", "cc_52", "cc_53", "cc_54", "cc_55", "cc_56" }; static const char* mixName[6] = { "Osc 1 level", "Osc 2 level", "Osc 3 level", "Ring mod 1*3 level", "Ring mod 2*3 level", "Noise level" };
+        for (size_t i = 0; i < data->faders.size() && i < 6; ++i) { auto f = std::make_unique<Fader>(find(mix[i]), mixName[i], data->faders[i]); addAndMakeVisible(*f); faders.push_back(std::move(f)); }
+        static const char* bid[6] = { "cc_115", "cc_116", "cc_112", "cc_113", "cc_109", "cc_110" }; static const char* bname[6] = { "Amp env attack slope", "Amp env decay slope", "Amp env attack track", "Amp env decay track", "Amp env sustain rate", "Amp env sustain time" };
+        for (size_t i = 0; i < data->bars.size() && i < 6; ++i) { auto b = std::make_unique<Bar>(find(bid[i]), bname[i], data->bars[i]); addAndMakeVisible(*b); bars.push_back(std::move(b)); }
+        if (!data->env.isEmpty()) { envGraph = std::make_unique<EnvGraph>(find("cc_73"), find("cc_75"), find("cc_70"), find("cc_110"), find("cc_72"), data->env); addAndMakeVisible(*envGraph); }
     }
     // the little waveform in the menu rows follows the waveform and pulse width of its oscillator
     juce::String iconSignature() const
     {
         static const char* w[3] = { "cc_19", "cc_29", "cc_41" }; static const char* pw[3] = { "cc_21", "cc_31", "cc_43" }; juce::String sig;
+        for (const char* m : { "cc_51", "cc_52", "cc_53", "cc_54", "cc_55", "cc_56" }) if (auto* q = find(m)) sig << juce::roundToInt(pget(q)) << "|";
         for (int i = 0; i < 3; ++i) { if (auto* a = find(w[i])) sig << juce::roundToInt(a->convertFrom0to1(a->getValue())) << ","; if (auto* b = find(pw[i])) sig << juce::roundToInt(b->convertFrom0to1(b->getValue())) << ";"; }
         return sig;
     }
     void paintIcons(juce::Graphics& g)
     {
         static const char* w[3] = { "cc_19", "cc_29", "cc_41" }; static const char* pw[3] = { "cc_21", "cc_31", "cc_43" };
+        if (!data->navBars.empty())
+        {
+            float bottom = 0; for (auto& r : data->navBars) bottom = juce::jmax(bottom, r.getBottom()); static const char* mix[6] = { "cc_51", "cc_52", "cc_53", "cc_54", "cc_55", "cc_56" };
+            for (size_t i = 0; i < data->navBars.size() && i < 6; ++i) { auto* q = find(mix[i]); const float v = pget(q), h = 3.0f + v / 127.0f * 11.0f; g.setColour(v > 0 ? juce::Colours::white : juce::Colour(0xff555555)); g.fillRect(data->navBars[i].getX(), bottom - h, data->navBars[i].getWidth(), h); }
+        }
         for (auto& ic : data->icons)
         {
             if (ic.n < 1 || ic.n > 3) continue; auto* a = find(w[ic.n - 1]); auto* b = find(pw[ic.n - 1]);
@@ -359,8 +479,8 @@ public:
     }
     void timerCallback() override
     {
-        for (auto& f : fields) f->refresh();
-        if (data) { auto sg = iconSignature(); if (sg != iconSig) { iconSig = sg; for (auto& ic : data->icons) repaint(ic.rect.expanded(3).toNearestInt()); } }
+        for (auto& f : fields) f->refresh(); for (auto& f : faders) f->refresh(); for (auto& b : bars) b->refresh(); if (envGraph) envGraph->refresh();
+        if (data) { auto sg = iconSignature(); if (sg != iconSig) { iconSig = sg; repaint(0, 0, 340, kH); } }
         for (auto& [i, fn] : live) { auto t = fn(); if (shown[i] != t) { shown[i] = t; repaint(data->runs[(size_t) i].r.expanded(8, 4).toNearestInt()); } }
     }
     void openPicker(WaveDial& wd)
@@ -419,7 +539,7 @@ public:
     }
 private:
     juce::AudioProcessor& proc; KnobLook look; juce::String page; std::unique_ptr<PageData> data; std::vector<std::unique_ptr<Knob>> knobs; std::vector<std::unique_ptr<WaveDial>> dials; std::unique_ptr<WavePicker> picker;
-    std::vector<std::unique_ptr<Field>> fields; std::map<int, std::function<juce::String()>> live; std::set<int> skip; std::map<int, juce::String> shown; juce::String iconSig;
+    std::vector<std::unique_ptr<Field>> fields; std::vector<std::unique_ptr<Fader>> faders; std::vector<std::unique_ptr<Bar>> bars; std::unique_ptr<EnvGraph> envGraph; std::map<int, std::function<juce::String()>> live; std::set<int> skip; std::map<int, juce::String> shown; juce::String iconSig;
 };
 
 class Editor : public juce::AudioProcessorEditor

@@ -10,7 +10,7 @@ cc_4,CC map,Foot controller,cc,4,0,0,127,0,assumed,0
 cc_68,CC map,Filter1 Type,cc,68,0,0,127,0,assumed,0
 cc_5,CC map,Portamento Rate,cc,5,0,0,127,0,assumed,0
 cc_69,CC map,Filter1 Track,cc,69,0,0,127,0,assumed,0
-cc_70,CC map,AmpEnv Sustain Level,cc,70,0,0,127,0,assumed,0
+cc_70,CC map,AmpEnv Sustain Level,cc,70,0,0,127,127,assumed,0
 cc_7,CC map,Channel volume,cc,7,0,0,127,0,assumed,0
 cc_71,CC map,Filter1 Resonance,cc,71,0,0,127,0,assumed,0
 cc_8,CC map,Dry:Wet Balance,cc,8,0,0,127,0,assumed,0
