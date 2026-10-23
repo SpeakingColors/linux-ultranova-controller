@@ -101,6 +101,7 @@ cc_54,CC map,Osc13 Ringmod Mix Level,cc,54,0,0,127,0,assumed,0
 cc_55,CC map,Osc23 Ringmod Mix Level,cc,55,0,0,127,0,assumed,0
 cc_56,CC map,Noise Mix Level,cc,56,0,0,127,0,assumed,0
 cc_57,CC map,Noise Type,cc,57,0,0,127,0,assumed,0
+cc_58,CC map,Pre-FX Level,cc,58,0,0,127,0,assumed,0
 cc_59,CC map,Post-FX Level,cc,59,0,0,127,0,assumed,0
 cc_60,CC map,Filter Configuration,cc,60,0,0,127,0,assumed,0
 cc_61,CC map,Filter Balance,cc,61,0,0,127,0,assumed,0

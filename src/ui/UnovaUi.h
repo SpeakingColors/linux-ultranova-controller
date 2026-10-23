@@ -35,7 +35,7 @@ inline const std::map<juce::String, std::vector<juce::String>>& knobMap()
                    "cc_31", "cc_30", "cc_34", "cc_33", "cc_39", "cc_36", "cc_35",          // Oscillator 2
                    "cc_43", "cc_42", "cc_45", "cc_44", "cc_49", "cc_47", "cc_46",          // Oscillator 3
                    "cc_16", "cc_76", "cc_77",                                              // common: drift, vibrato rate, vibrato depth
-                   "", "cc_59",                                                            // effects send (Pre-FX level, CC number unclear in the source), output (Post-FX level)
+                   "cc_58", "cc_59",                                                            // effects send (Pre-FX level, CC number unclear in the source), output (Post-FX level)
                    "cc_15", "cc_5",                                                        // unison detune, portamento time
                    "cc_108", "cc_111", "cc_114" } },                                       // amp envelope: velocity, repeat, level track
         { "filter", { "cc_61",
@@ -45,7 +45,7 @@ inline const std::map<juce::String, std::vector<juce::String>>& knobMap()
         { "mod", { "nrpn_0_76", "nrpn_0_72", "nrpn_0_74",                                  // LFO 1: rate, slew, delay
                    "nrpn_0_56", "nrpn_0_63", "nrpn_0_66" } },                              // Envelope 6: delay, repeat, level track
         { "fx", { "nrpn_0_105", "nrpn_0_107", "nrpn_0_109", "nrpn_0_104", "nrpn_0_106", "nrpn_0_108",   // EQ levels and frequencies
-                  "nrpn_0_98", "",                                                          // feedback, FX wet level (no clear CC)
+                  "nrpn_0_98", "cc_8",                                                          // feedback, FX wet level (no clear CC)
                   "cc_91", "cc_92", "cc_93", "cc_94", "cc_95",                              // slot amounts
                   "nrpn_1_67", "nrpn_1_66", "nrpn_1_64", "nrpn_1_63",                       // arpeggiator velocity, pattern, gate time, rate sync
                   "nrpn_1_78",                                                              // chord transpose

@@ -15,7 +15,7 @@ Controller plugin for the Novation UltraNova and MiniNova on Linux.
 ## Status
 **Early build, backend v0.2 (not released yet).** A MIDI controller plugin (VST3 and standalone) that sends and receives the CC and NRPN messages listed in [map/params.csv](map/params.csv).
 
-- 482 parameters from Novation's MIDI assignments: 107 CC, 374 NRPN (envelopes, LFOs, FX, EQ, compressors, arpeggiator, gator, vocoder, 20 mod matrix slots, touch and solo controls, global audio setup) and ClockBPM as a 14 bit NRPN. Spare and packed-special NRPNs are left out on purpose.
+- 483 parameters from Novation's MIDI assignments: 108 CC, 374 NRPN (envelopes, LFOs, FX, EQ, compressors, arpeggiator, gator, vocoder, 20 mod matrix slots, touch and solo controls, global audio setup) and ClockBPM as a 14 bit NRPN. Spare and packed-special NRPNs are left out on purpose.
 - The backend follows the rules printed in that document: nrpnMSB is 0 at power-up and after every data entry (so the panel's two-message NRPNs are understood), 14 bit values are sent as dataMSB then dataLSB, other controllers inside a sequence do not break it, touch and solo use 0..63 off and 64..127 on.
 - Outgoing messages are queued: the newest value per parameter wins, parameters go out in turn, and an NRPN sequence is never cut in half. At most 48 messages leave per audio block.
 - Global / audio setup values are never automated and are not sent by "Send all".
