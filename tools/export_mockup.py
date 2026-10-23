@@ -48,10 +48,10 @@ TEXTJS = r"""(key) => {
     const txt = n.nodeValue; if (!txt.trim()) continue; const p = n.parentElement;
     if (!p || ['SCRIPT', 'STYLE'].includes(p.tagName) || p.closest('svg') || p.closest('[data-knob]')) continue;
     const cs = getComputedStyle(p); if (cs.visibility === 'hidden' || cs.display === 'none') continue;
-    let op = 1, ang = 0, e = p; while (e && e !== root.parentElement) { const c = getComputedStyle(e); op *= parseFloat(c.opacity);
+    let op = 1, ang = 0, br = 1, e = p; while (e && e !== root.parentElement) { const c = getComputedStyle(e); op *= parseFloat(c.opacity); const bm = /brightness\(([\d.]+)\)/.exec(c.filter || ''); if (bm) br *= parseFloat(bm[1]);
       if (c.transform && c.transform !== 'none') { const m = c.transform.match(/matrix\(([^)]+)\)/); if (m) { const v = m[1].split(',').map(Number); ang += Math.atan2(v[1], v[0]) * 180 / Math.PI; } } e = e.parentElement; }
     const vertical = (cs.writingMode || '').startsWith('vertical'); if (vertical) ang += 90;
-    const col = rgba(cs.color); col[3] *= op; if (col[3] <= 0.01) continue;
+    const col = rgba(cs.color); col[3] *= op; for (let q = 0; q < 3; q++) col[q] = Math.round(col[q] * br); if (col[3] <= 0.01) continue;
     const r = document.createRange(); const lines = []; let cur = null;
     for (let i = 0; i < txt.length; i++) {
       r.setStart(n, i); r.setEnd(n, i + 1); const rc = r.getClientRects()[0]; if (!rc || (rc.width === 0 && rc.height === 0)) continue;
@@ -76,7 +76,7 @@ TEXTJS = r"""(key) => {
     a.querySelectorAll('span[style*="width: 4px"]').forEach(b => { const r = b.getBoundingClientRect(); navBars.push({ x: +(r.left - rb.left).toFixed(1), y: +(r.top - rb.top).toFixed(1), w: +r.width.toFixed(1), h: +r.height.toFixed(1) }); b.style.visibility = 'hidden'; }); });
   // Oscillators page only: the mixer faders, the six envelope bars and the envelope graph become live controls
   const faders = [], bars = []; let env = null;
-  if (key === 'osc' || key === 'filter') {
+  if (key === 'osc' || key === 'filter' || key === 'mod') {
     const R = e => { const r = e.getBoundingClientRect(); return { x: +(r.left - rb.left).toFixed(1), y: +(r.top - rb.top).toFixed(1), w: +r.width.toFixed(1), h: +r.height.toFixed(1) }; };
     root.querySelectorAll('div[style*="width: 8px"][style*="height: 54px"]').forEach(f => { faders.push(R(f)); f.style.visibility = 'hidden'; });
     root.querySelectorAll('div[style*="height: 3px"][style*="background: #2C3B52"]').forEach(f => { bars.push(R(f)); f.style.visibility = 'hidden'; });
@@ -85,7 +85,9 @@ TEXTJS = r"""(key) => {
   // Filter page: the two round filter response windows are drawn by the plugin from type, frequency and resonance
   const filterDials = []; if (key === 'filter') root.querySelectorAll('svg[aria-label^="Filter "]').forEach(sv => { const r = sv.getBoundingClientRect(); const ring = sv.querySelector('circle[stroke]'); const pa = sv.querySelector('path[stroke]');
     filterDials.push({ x: +(r.left - rb.left).toFixed(1), y: +(r.top - rb.top).toFixed(1), w: +r.width.toFixed(1), h: +r.height.toFixed(1), ring: ring ? ring.getAttribute('stroke') : '#56B9E0', color: pa ? pa.getAttribute('stroke') : '#7EE3E8' }); sv.style.visibility = 'hidden'; });
-  return { runs, dials, navIcons, navBars, faders, bars, env, filterDials };
+  // Modulation page: the LFO waveform window is drawn by the plugin from the LFO waveform control
+  const lfoWins = []; if (key === 'mod') root.querySelectorAll('svg[aria-label^="LFO"][role="img"]').forEach(sv => { const r = sv.getBoundingClientRect(); lfoWins.push({ x: +(r.left - rb.left).toFixed(1), y: +(r.top - rb.top).toFixed(1), w: +r.width.toFixed(1), h: +r.height.toFixed(1) }); sv.style.visibility = 'hidden'; });
+  return { runs, dials, navIcons, navBars, faders, bars, env, filterDials, lfoWins };
 }"""
 HIDE_TEXT = "*{color:transparent !important;text-shadow:none !important;-webkit-text-fill-color:transparent !important} svg text{display:none !important}"
 
@@ -95,7 +97,7 @@ with sync_playwright() as p:
         pg.goto("file://%s/docs/mockups/%s.dc.html" % (root, name)); pg.add_style_tag(content=FONTS)
         pg.wait_for_timeout(1500); pg.evaluate("document.fonts.ready"); pg.wait_for_timeout(500)
         info = pg.evaluate(JS, [760, 1348])
-        tx = pg.evaluate(TEXTJS, key); info["runs"] = tx["runs"]; info["dials"] = tx["dials"]; info["navIcons"] = tx["navIcons"]; info["navBars"] = tx["navBars"]; info["faders"] = tx["faders"]; info["bars"] = tx["bars"]; info["env"] = tx["env"]; info["filterDials"] = tx["filterDials"]
+        tx = pg.evaluate(TEXTJS, key); info["runs"] = tx["runs"]; info["dials"] = tx["dials"]; info["navIcons"] = tx["navIcons"]; info["navBars"] = tx["navBars"]; info["faders"] = tx["faders"]; info["bars"] = tx["bars"]; info["env"] = tx["env"]; info["filterDials"] = tx["filterDials"]; info["lfoWins"] = tx["lfoWins"]
         pg.add_style_tag(content=HIDE_TEXT); pg.wait_for_timeout(200)
         el = pg.query_selector("x-dc > :last-child")
         el.screenshot(path=os.path.join(root, "assets/ui/%s.png" % key))

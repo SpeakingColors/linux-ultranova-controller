@@ -83,7 +83,7 @@ struct NavSpec { juce::String page; juce::Rectangle<float> rect; };
 struct ButtonSpec { juce::String text, label; juce::Rectangle<float> rect; };
 struct PageData
 {
-    juce::Image art; std::vector<KnobSpec> knobs; std::vector<NavSpec> nav; std::vector<ButtonSpec> buttons; std::vector<TextRun> runs; std::vector<DialSpec> dials; std::vector<IconSpec> icons; std::vector<juce::Rectangle<float>> navBars, faders, bars; juce::Rectangle<float> env; std::vector<FilterDialSpec> filterDials;
+    juce::Image art; std::vector<KnobSpec> knobs; std::vector<NavSpec> nav; std::vector<ButtonSpec> buttons; std::vector<TextRun> runs; std::vector<DialSpec> dials; std::vector<IconSpec> icons; std::vector<juce::Rectangle<float>> navBars, faders, bars; juce::Rectangle<float> env; std::vector<FilterDialSpec> filterDials; std::vector<juce::Rectangle<float>> lfoWins;
     static std::unique_ptr<PageData> load(const juce::String& key)
     {
         auto pd = std::make_unique<PageData>(); auto png = resource(key + ".png"); auto js = resource(key + ".json");
@@ -108,6 +108,7 @@ struct PageData
         list("navBars", pd->navBars); list("faders", pd->faders); list("bars", pd->bars); if (v["env"].isObject()) pd->env = rectOf(v["env"]);
         auto col = [](const juce::String& c) { return juce::Colour::fromString("ff" + c.fromFirstOccurrenceOf("#", false, false)); };
         if (auto* fs = v["filterDials"].getArray()) for (auto& d : *fs) pd->filterDials.push_back({ rectOf(d), col(d["ring"].toString()), col(d["color"].toString()) });
+        list("lfoWins", pd->lfoWins);
         return pd;
     }
 };
@@ -461,6 +462,58 @@ private:
     juce::RangedAudioParameter* param; juce::StringArray options; juce::Font font; juce::Colour col; juce::String title, last;
 };
 
+// LFO waveform names as in the maker's LFO Waveform Table; which controller value picks which name is assumed (value = position in this list).
+inline const juce::StringArray& lfoNames()
+{
+    static const juce::StringArray n { "Sine", "Triangle", "Sawtooth", "Square", "Rand S/H", "Time S/H", "PianoEnv", "Seq 1", "Seq 2", "Seq 3", "Seq 4", "Seq 5", "Seq 6", "Seq 7",
+        "Altern 1", "Altern 2", "Altern 3", "Altern 4", "Altern 5", "Altern 6", "Altern 7", "Altern 8", "Chromat", "Major", "Major 7", "Minor 7", "MinArp 1", "MinArp 2", "Diminish", "DecMinor", "Minor3rd", "Pedal", "4ths", "4ths x12", "1625 Maj", "1625 Min", "2511" };
+    return n;
+}
+// The LFO waveform window. Smooth shapes are drawn as lines, stepped shapes as bars; the stepped patterns are illustrative (the real step values are not in the maker's document).
+class LfoWindow : public juce::Component, public juce::SettableTooltipClient
+{
+public:
+    LfoWindow(juce::RangedAudioParameter* p, juce::Rectangle<float> box) : param(p) { setBounds(box.toNearestInt()); setMouseCursor(juce::MouseCursor::PointingHandCursor); tip(); }
+    void refresh() { if (pget(param) != last) { repaint(); tip(); } }
+    void paint(juce::Graphics& g) override
+    {
+        last = pget(param); const int idx = juce::jlimit(0, lfoNames().size() - 1, juce::roundToInt(last)); const auto b = getLocalBounds().toFloat().reduced(0.5f);
+        g.setColour(juce::Colour(0xff0A1626)); g.fillRoundedRectangle(b, 4); g.setColour(juce::Colour(0xff4E5F86)); g.drawRoundedRectangle(b, 4, 1);
+        const float W = (float) getWidth(), top = 8, bot = (float) getHeight() - 16, mid = (top + bot) / 2, amp = (bot - top) / 2;
+        if (idx <= 3 || idx == 6)
+        {
+            juce::Path p; for (int i = 0; i <= 96; ++i)
+            {
+                const float t = (float) i / 96.0f * 2.0f, f = t - std::floor(t); float v;
+                if (idx == 0) v = std::sin(juce::MathConstants<float>::twoPi * f); else if (idx == 1) v = f < 0.5f ? 4 * f - 1 : 3 - 4 * f; else if (idx == 2) v = 2 * f - 1; else if (idx == 3) v = f < 0.5f ? 1.0f : -1.0f; else v = 2 * std::exp(-4.0f * f) - 1;
+                const float x = 10 + t / 2.0f * (W - 20), y = mid - v * amp; if (i) p.lineTo(x, y); else p.startNewSubPath(x, y);
+            }
+            g.setColour(juce::Colour(0xff7EE3E8)); g.strokePath(p, juce::PathStrokeType(2.0f));
+        }
+        else
+        {
+            float x = (float) (idx * 37 + 11); auto rnd = [&x] { x = std::fmod(x * 9301.0f + 49297.0f, 233280.0f); return x / 233280.0f; };
+            const int n = idx >= 14 && idx < 22 ? 8 : 8; const float bw = (W - 20) / (float) n; g.setColour(juce::Colour(0xffE6E8EC));
+            for (int i = 0; i < n; ++i)
+            {
+                float v = rnd(); if (idx >= 14 && idx < 22) v = (i % 2 == 0) ? 0.85f : 0.2f + 0.15f * (float) ((idx + i) % 3); else if (idx >= 22) v = 0.2f + 0.8f * (float) ((i * (idx % 5 + 2) + idx) % 7) / 6.0f;
+                const float h = v * (bot - top); g.fillRect(10 + (float) i * bw + 1, bot - h, bw - 2, h);
+            }
+        }
+        g.setColour(juce::Colour(0xff99AAAA)); g.setFont(makeFont(400, false, 7.0f)); g.drawText(lfoNames()[idx], getLocalBounds().withTrimmedTop(getHeight() - 14), juce::Justification::centred);
+    }
+    void mouseDown(const juce::MouseEvent&) override
+    {
+        if (!param) return; juce::PopupMenu m; const int cur = juce::roundToInt(pget(param));
+        for (int i = 0; i < lfoNames().size(); ++i) m.addItem(i + 1, lfoNames()[i], true, i == cur);
+        m.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(this), [this, safe = juce::Component::SafePointer<LfoWindow>(this)](int r)
+            { if (safe != nullptr && r > 0 && param) { param->beginChangeGesture(); pset(param, (float) (r - 1)); param->endChangeGesture(); repaint(); } });
+    }
+private:
+    void tip() { setTooltip(juce::String("LFO waveform: ") + lfoNames()[juce::jlimit(0, lfoNames().size() - 1, juce::roundToInt(pget(param)))] + " (click to choose; list order assumed, stepped patterns illustrative)"); }
+    juce::RangedAudioParameter* param; float last = -1;
+};
+
 // A knob wired to one parameter (or disabled at the mockup's resting angle when there is none).
 class Knob : public juce::Slider
 {
@@ -490,11 +543,11 @@ class Content : public juce::Component, private juce::Timer
 public:
     std::function<void()> onZoom, onInfo, onAll, onReset100;
     Content(juce::AudioProcessor& p) : proc(p) { setSize(kW, kH); setOpaque(true); startTimerHz(20); }
-    ~Content() override { stopTimer(); knobs.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); filterDials.clear(); dropdowns.clear(); }
+    ~Content() override { stopTimer(); knobs.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); filterDials.clear(); dropdowns.clear(); lfoViews.clear(); }
 
     void showPage(const juce::String& key)
     {
-        knobs.clear(); dials.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); filterDials.clear(); dropdowns.clear(); live.clear(); skip.clear(); shown.clear(); picker.reset(); page = key; data = PageData::load(key); const auto& ids = knobMap().at(key);
+        knobs.clear(); dials.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); filterDials.clear(); dropdowns.clear(); lfoViews.clear(); live.clear(); skip.clear(); shown.clear(); picker.reset(); page = key; data = PageData::load(key); const auto& ids = knobMap().at(key);
         for (size_t i = 0; i < data->knobs.size(); ++i)
         {
             juce::RangedAudioParameter* prm = nullptr;
@@ -526,14 +579,15 @@ public:
             else if (r.t.endsWith(" Detune") && nc < 3) { if (auto* p = find(cents[nc++])) live[(int) i] = [p] { return Field::text(p, true) + " Detune"; }; }
         }
         static const juce::StringArray drive { "Diode", "Valve", "Clipper", "XOver", "Rectify", "BitsDown", "RateDown" };   // names as in the maker's Distortion list
-        if (key == "filter") { bindMixerAndEnvelope(false); dropdown("Diode", "cc_65", drive, "Filter 1 drive type"); dropdown("XOver", "cc_81", drive, "Filter 2 drive type"); return; }
+        if (key == "mod") { bindMixerAndEnvelope(2); if (!data->lfoWins.empty()) { auto l = std::make_unique<LfoWindow>(find("nrpn_0_70"), data->lfoWins[0]); addAndMakeVisible(*l); lfoViews.push_back(std::move(l)); } return; }
+        if (key == "filter") { bindMixerAndEnvelope(1); dropdown("Diode", "cc_65", drive, "Filter 1 drive type"); dropdown("XOver", "cc_81", drive, "Filter 2 drive type"); return; }
         if (key != "osc") return;
         auto box = [this](int run, const char* id, bool centred) {
             auto* p = find(id); if (!p) return; const auto& r = data->runs[(size_t) run]; skip.insert(run);
             auto f = std::make_unique<Field>(p, centred, r, juce::Rectangle<float>(40, 20).withCentre(r.r.getCentre())); addAndMakeVisible(*f); fields.push_back(std::move(f)); };
         box(78, "cc_26", true); box(79, "cc_28", true); box(104, "cc_37", true); box(105, "cc_40", true); box(130, "cc_48", true); box(131, "cc_50", true);
         box(171, "cc_14", false);
-        bindMixerAndEnvelope(true);
+        bindMixerAndEnvelope(0);
         dropdown("Exponential", "cc_12", { "Linear", "Exponential" }, "Portamento mode"); dropdown("Mono Auto-Glide", "cc_3", { "Mono", "Mono Auto-Glide", "Polyphonic" }, "Polyphony mode");
     }
     void dropdown(const juce::String& boxText, const char* id, juce::StringArray opts, const juce::String& name)
@@ -546,19 +600,21 @@ public:
         }
     }
     // Mixer faders, the six envelope bars and the envelope graph (same layout on the Oscillators page for the amp envelope and on the Filter page for the filter envelope).
-    void bindMixerAndEnvelope(bool amp)
+    void bindMixerAndEnvelope(int page)
     {
+        const bool amp = page == 0, mod = page == 2;
         static const char* mix[6] = { "cc_51", "cc_52", "cc_53", "cc_54", "cc_55", "cc_56" }; static const char* mixName[6] = { "Osc 1 level", "Osc 2 level", "Osc 3 level", "Ring mod 1*3 level", "Ring mod 2*3 level", "Noise level" };
         for (size_t i = 0; i < data->faders.size() && i < 6; ++i) { auto f = std::make_unique<Fader>(find(mix[i]), mixName[i], data->faders[i]); addAndMakeVisible(*f); faders.push_back(std::move(f)); }
         static const char* ampBar[6] = { "cc_115", "cc_116", "cc_112", "cc_113", "cc_109", "cc_110" }; static const char* filBar[6] = { "nrpn_0_11", "nrpn_0_12", "nrpn_0_8", "nrpn_0_9", "nrpn_0_5", "nrpn_0_6" };
+        static const char* modBar[6] = { "nrpn_0_67", "nrpn_0_68", "nrpn_0_64", "nrpn_0_65", "nrpn_0_61", "nrpn_0_62" };
         static const char* bname[6] = { "attack slope", "decay slope", "attack track", "decay track", "sustain rate", "sustain time" };
-        for (size_t i = 0; i < data->bars.size() && i < 6; ++i) { auto b = std::make_unique<Bar>(find(amp ? ampBar[i] : filBar[i]), juce::String(amp ? "Amp env " : "Filter env ") + bname[i], data->bars[i]); addAndMakeVisible(*b); bars.push_back(std::move(b)); }
+        for (size_t i = 0; i < data->bars.size() && i < 6; ++i) { auto b = std::make_unique<Bar>(find(amp ? ampBar[i] : mod ? modBar[i] : filBar[i]), juce::String(amp ? "Amp env " : mod ? "Envelope 6 " : "Filter env ") + bname[i], data->bars[i]); addAndMakeVisible(*b); bars.push_back(std::move(b)); }
         if (!data->env.isEmpty())
         {
-            envGraph = amp ? std::make_unique<EnvGraph>(find("cc_73"), find("cc_75"), find("cc_70"), find("cc_110"), find("cc_72"), data->env) : std::make_unique<EnvGraph>(find("nrpn_0_1"), find("nrpn_0_2"), find("nrpn_0_3"), find("nrpn_0_6"), find("nrpn_0_4"), data->env);
+            envGraph = amp ? std::make_unique<EnvGraph>(find("cc_73"), find("cc_75"), find("cc_70"), find("cc_110"), find("cc_72"), data->env) : mod ? std::make_unique<EnvGraph>(find("nrpn_0_57"), find("nrpn_0_58"), find("nrpn_0_59"), find("nrpn_0_62"), find("nrpn_0_60"), data->env) : std::make_unique<EnvGraph>(find("nrpn_0_1"), find("nrpn_0_2"), find("nrpn_0_3"), find("nrpn_0_6"), find("nrpn_0_4"), data->env);
             addAndMakeVisible(*envGraph);
         }
-        if (!amp)
+        if (page == 1)
         {
             static const char* t[2] = { "cc_68", "cc_82" }; static const char* f[2] = { "cc_74", "cc_83" }; static const char* r[2] = { "cc_71", "cc_85" };
             for (size_t i = 0; i < data->filterDials.size() && i < 2; ++i) { auto d = std::make_unique<FilterDial>(find(t[i]), find(f[i]), find(r[i]), data->filterDials[i].ring, data->filterDials[i].curve, data->filterDials[i].rect, "Filter " + juce::String((int) i + 1)); addAndMakeVisible(*d); filterDials.push_back(std::move(d)); }
@@ -589,7 +645,7 @@ public:
     }
     void timerCallback() override
     {
-        for (auto& f : fields) f->refresh(); for (auto& f : faders) f->refresh(); for (auto& b : bars) b->refresh(); if (envGraph) envGraph->refresh(); for (auto& f : filterDials) f->refresh(); for (auto& d : dropdowns) d->refresh();
+        for (auto& f : fields) f->refresh(); for (auto& f : faders) f->refresh(); for (auto& b : bars) b->refresh(); if (envGraph) envGraph->refresh(); for (auto& f : filterDials) f->refresh(); for (auto& d : dropdowns) d->refresh(); for (auto& l : lfoViews) l->refresh();
         if (data) { auto sg = iconSignature(); if (sg != iconSig) { iconSig = sg; repaint(0, 0, 340, kH); } }
         for (auto& [i, fn] : live) { auto t = fn(); if (shown[i] != t) { shown[i] = t; repaint(data->runs[(size_t) i].r.expanded(8, 4).toNearestInt()); } }
     }
@@ -650,7 +706,7 @@ public:
     }
 private:
     juce::AudioProcessor& proc; KnobLook look; juce::String page; std::unique_ptr<PageData> data; std::vector<std::unique_ptr<Knob>> knobs; std::vector<std::unique_ptr<WaveDial>> dials; std::unique_ptr<WavePicker> picker;
-    std::vector<std::unique_ptr<Field>> fields; std::vector<std::unique_ptr<Fader>> faders; std::vector<std::unique_ptr<Bar>> bars; std::unique_ptr<EnvGraph> envGraph; std::vector<std::unique_ptr<FilterDial>> filterDials; std::vector<std::unique_ptr<Dropdown>> dropdowns; std::map<int, std::function<juce::String()>> live; std::set<int> skip; std::map<int, juce::String> shown; juce::String iconSig;
+    std::vector<std::unique_ptr<Field>> fields; std::vector<std::unique_ptr<Fader>> faders; std::vector<std::unique_ptr<Bar>> bars; std::unique_ptr<EnvGraph> envGraph; std::vector<std::unique_ptr<FilterDial>> filterDials; std::vector<std::unique_ptr<Dropdown>> dropdowns; std::vector<std::unique_ptr<LfoWindow>> lfoViews; std::map<int, std::function<juce::String()>> live; std::set<int> skip; std::map<int, juce::String> shown; juce::String iconSig;
 };
 
 class Editor : public juce::AudioProcessorEditor

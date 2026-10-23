@@ -2390,5 +2390,6 @@
  "faders": [],
  "bars": [],
  "env": null,
- "filterDials": []
+ "filterDials": [],
+ "lfoWins": []
 }

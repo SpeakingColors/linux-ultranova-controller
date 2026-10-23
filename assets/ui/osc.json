@@ -5431,5 +5431,6 @@
   "w": 335.2,
   "h": 120
  },
- "filterDials": []
+ "filterDials": [],
+ "lfoWins": []
 }
