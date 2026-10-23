@@ -62,6 +62,7 @@ GL = [(0, "Protect"), (2, "Power-up Bank"), (3, "Power-up Patch"), (4, "Global M
       (44, "Phones Balance (levbal mode)")]
 for lsb, n in GL: add(64, lsb, "Global", n)
 
+DEFAULTS = {(0, 3): 127}   # start values that are not 0: Filter envelope sustain level full
 lines = open(path).read().splitlines()
 keep = [l for l in lines if l.startswith("id,") or l.startswith("cc_") or l.startswith("cc14_")]
 out = list(keep)
@@ -71,6 +72,6 @@ for msb, lsb, g, n, kind, lo, hi, src in rows:
     if key in seen: sys.exit("duplicate address %s" % (key,))
     seen.add(key)
     q = '"%s"' % n if "," in n else n
-    out.append("nrpn_%d_%d,%s,%s,%s,%d,%d,%d,%d,0,%s,0" % (msb, lsb, g, q, kind, msb, lsb, lo, hi, src))
+    out.append("nrpn_%d_%d,%s,%s,%s,%d,%d,%d,%d,%d,%s,0" % (msb, lsb, g, q, kind, msb, lsb, lo, hi, DEFAULTS.get(key, 0), src))
 open(path, "w").write("\n".join(out) + "\n")
 print("wrote %d CC lines + %d NRPN lines" % (len(keep) - 1, len(rows)))

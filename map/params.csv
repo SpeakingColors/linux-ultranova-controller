@@ -110,7 +110,7 @@ cc_63,CC map,Filter1 Drive,cc,63,0,0,127,0,assumed,0
 nrpn_0_0,Filter envelope,FiltEnv Velocity,nrpn,0,0,0,127,0,assumed,0
 nrpn_0_1,Filter envelope,FiltEnv Attack,nrpn,0,1,0,127,0,assumed,0
 nrpn_0_2,Filter envelope,FiltEnv Decay,nrpn,0,2,0,127,0,assumed,0
-nrpn_0_3,Filter envelope,FiltEnv Sustain Level,nrpn,0,3,0,127,0,assumed,0
+nrpn_0_3,Filter envelope,FiltEnv Sustain Level,nrpn,0,3,0,127,127,assumed,0
 nrpn_0_4,Filter envelope,FiltEnv Release,nrpn,0,4,0,127,0,assumed,0
 nrpn_0_5,Filter envelope,FiltEnv Sustain Rate,nrpn,0,5,0,127,0,assumed,0
 nrpn_0_6,Filter envelope,FiltEnv Sustain Time,nrpn,0,6,0,127,0,assumed,0

@@ -75,6 +75,7 @@ inline juce::Font makeFont(int weight, bool vt, float px) { return juce::Font(ju
 inline float textWidth(const juce::Font& f, const juce::String& t) { juce::GlyphArrangement ga; ga.addLineOfText(f, t, 0, 0); return ga.getBoundingBox(0, -1, true).getWidth(); }
 
 struct TextRun { juce::String t; juce::Rectangle<float> r; juce::Font font; juce::Colour col; int rot = 0; };
+struct FilterDialSpec { juce::Rectangle<float> rect; juce::Colour ring, curve; };
 struct IconSpec { int n = 1; juce::Rectangle<float> rect; juce::Colour color; };
 struct DialSpec { juce::Rectangle<float> rect; juce::Colour color; };
 struct KnobSpec { juce::Rectangle<float> rect; float angle = 0; };
@@ -82,7 +83,7 @@ struct NavSpec { juce::String page; juce::Rectangle<float> rect; };
 struct ButtonSpec { juce::String text, label; juce::Rectangle<float> rect; };
 struct PageData
 {
-    juce::Image art; std::vector<KnobSpec> knobs; std::vector<NavSpec> nav; std::vector<ButtonSpec> buttons; std::vector<TextRun> runs; std::vector<DialSpec> dials; std::vector<IconSpec> icons; std::vector<juce::Rectangle<float>> navBars, faders, bars; juce::Rectangle<float> env;
+    juce::Image art; std::vector<KnobSpec> knobs; std::vector<NavSpec> nav; std::vector<ButtonSpec> buttons; std::vector<TextRun> runs; std::vector<DialSpec> dials; std::vector<IconSpec> icons; std::vector<juce::Rectangle<float>> navBars, faders, bars; juce::Rectangle<float> env; std::vector<FilterDialSpec> filterDials;
     static std::unique_ptr<PageData> load(const juce::String& key)
     {
         auto pd = std::make_unique<PageData>(); auto png = resource(key + ".png"); auto js = resource(key + ".json");
@@ -105,6 +106,8 @@ struct PageData
         if (auto* is = v["navIcons"].getArray()) for (auto& d : *is) pd->icons.push_back({ (int) d["n"], rectOf(d), juce::Colour::fromString("ff" + d["color"].toString().fromFirstOccurrenceOf("#", false, false)) });
         auto list = [&](const char* k, std::vector<juce::Rectangle<float>>& out) { if (auto* a = v[k].getArray()) for (auto& r : *a) out.push_back(rectOf(r)); };
         list("navBars", pd->navBars); list("faders", pd->faders); list("bars", pd->bars); if (v["env"].isObject()) pd->env = rectOf(v["env"]);
+        auto col = [](const juce::String& c) { return juce::Colour::fromString("ff" + c.fromFirstOccurrenceOf("#", false, false)); };
+        if (auto* fs = v["filterDials"].getArray()) for (auto& d : *fs) pd->filterDials.push_back({ rectOf(d), col(d["ring"].toString()), col(d["color"].toString()) });
         return pd;
     }
 };
@@ -379,6 +382,54 @@ private:
     juce::RangedAudioParameter *A, *D, *S, *ST, *R; float last = -1, k0 = 1; int grab = 0; juce::Point<float> start; std::array<float, 5> v0{};
 };
 
+// Filter types in the order of the maker's list ("14 types"). Which controller value picks which type is not in the document: assumed value 0..13 in this order.
+struct FType { const char* name; int kind, a, b; bool noRes; };   // kind 0 low pass, 1 band pass (a high pass side, b low pass side), 2 high pass
+inline const FType& filterType(int i)
+{
+    static const FType t[14] = { { "LP6NoRes", 0, 1, 0, true }, { "LP12", 0, 2, 0, false }, { "LP18", 0, 3, 0, false }, { "LP24", 0, 4, 0, false }, { "BP6/6", 1, 1, 1, false }, { "BP12/12", 1, 2, 2, false }, { "BP6/12", 1, 1, 2, false },
+        { "BP12/6", 1, 2, 1, false }, { "BP6/18", 1, 1, 3, false }, { "BP18/6", 1, 3, 1, false }, { "HP6NoRes", 2, 1, 0, true }, { "HP12", 2, 2, 0, false }, { "HP18", 2, 3, 0, false }, { "HP24", 2, 4, 0, false } };
+    return t[juce::jlimit(0, 13, i)];
+}
+// Illustrative response: cutoff 20 Hz to 20 kHz over the controller range (assumed), resonance bump up to 18 dB. Returns dB at frequency f.
+inline float filterDb(const FType& ft, float freqV, float resV, float f)
+{
+    const float fc = 20.0f * std::pow(1000.0f, freqV / 127.0f); auto lp = [](float x, int n) { return 1.0f / std::sqrt(1.0f + std::pow(x, 2.0f * (float) n)); };
+    float m;
+    if (ft.kind == 0) m = lp(f / fc, ft.a); else if (ft.kind == 2) m = lp(fc / f, ft.a); else m = lp(f / (fc * 1.6f), ft.b) * lp((fc / 1.6f) / f, ft.a);
+    float db = 20.0f * std::log10(juce::jmax(m, 1.0e-4f));
+    if (!ft.noRes) { const float l = std::log(f / fc); db += resV / 127.0f * 18.0f * std::exp(-l * l / (2.0f * 0.14f * 0.14f)); }
+    return db;
+}
+// The round filter window: draws the response of the current type, frequency and resonance. Drag sideways for frequency, up or down for resonance.
+class FilterDial : public juce::Component, public juce::SettableTooltipClient
+{
+public:
+    FilterDial(juce::RangedAudioParameter* t, juce::RangedAudioParameter* f, juce::RangedAudioParameter* r, juce::Colour ringC, juce::Colour curveC, juce::Rectangle<float> box, const juce::String& name)
+        : T(t), F(f), R(r), ring(ringC), curve(curveC), title(name) { setBounds(box.toNearestInt()); setMouseCursor(juce::MouseCursor::UpDownLeftRightResizeCursor); tip(); }
+    void refresh() { const float sg = pget(T) + pget(F) * 31 + pget(R) * 1009; if (sg != last) { repaint(); tip(); } }
+    void paint(juce::Graphics& g) override
+    {
+        last = pget(T) + pget(F) * 31 + pget(R) * 1009; const float u = (float) juce::jmin(getWidth(), getHeight()) / 64.0f; const juce::Point<float> c((float) getWidth() / 2, (float) getHeight() / 2);
+        g.setColour(juce::Colours::black); g.fillEllipse(c.x - 30 * u, c.y - 30 * u, 60 * u, 60 * u);
+        g.setColour(juce::Colour(0xff0B0C0E)); g.fillEllipse(c.x - 28 * u, c.y - 28 * u, 56 * u, 56 * u); g.setColour(ring); g.drawEllipse(c.x - 28 * u, c.y - 28 * u, 56 * u, 56 * u, 1.2f * u);
+        const auto& ft = filterType(juce::roundToInt(pget(T))); juce::Path p; const float x0 = c.x - 20 * u, w = 40 * u;
+        for (int i = 0; i <= 64; ++i)
+        {
+            const float t = (float) i / 64.0f, db = filterDb(ft, pget(F), pget(R), 20.0f * std::pow(1000.0f, t)), y = c.y + (14.0f - juce::jlimit(-14.0f, 14.0f, db) / 50.0f * 34.0f - 8.0f) * u - 6 * u;
+            if (i) p.lineTo(x0 + t * w, y); else p.startNewSubPath(x0 + t * w, y);
+        }
+        g.saveState(); g.reduceClipRegion(juce::Rectangle<float>(c.x - 24 * u, c.y - 24 * u, 48 * u, 38 * u).toNearestInt()); g.setColour(curve); g.strokePath(p, juce::PathStrokeType(2.0f * u, juce::PathStrokeType::curved, juce::PathStrokeType::rounded)); g.restoreState();
+        g.setColour(juce::Colours::white); g.setFont(makeFont(400, false, 7.0f * u)); g.drawText(ft.name, juce::Rectangle<float>(c.x - 26 * u, c.y + 12 * u, 52 * u, 10 * u), juce::Justification::centred, false);
+    }
+    void mouseDown(const juce::MouseEvent&) override { f0 = pget(F); r0 = pget(R); for (auto* q : { F, R }) if (q) q->beginChangeGesture(); }
+    void mouseDrag(const juce::MouseEvent& e) override { pset(F, f0 + (float) e.getOffsetFromDragStart().x * 0.9f); pset(R, r0 - (float) e.getOffsetFromDragStart().y * 0.9f); }
+    void mouseUp(const juce::MouseEvent&) override { for (auto* q : { F, R }) if (q) q->endChangeGesture(); }
+    void mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails& w) override { if (F) { F->beginChangeGesture(); pset(F, pget(F) + (w.deltaY > 0 ? 2.0f : -2.0f)); F->endChangeGesture(); } }
+private:
+    void tip() { setTooltip(title + ": " + filterType(juce::roundToInt(pget(T))).name + ", frequency " + juce::String(juce::roundToInt(pget(F))) + ", resonance " + juce::String(juce::roundToInt(pget(R))) + " (drag sideways = frequency, up or down = resonance; type order and Hz scale assumed)"); }
+    juce::RangedAudioParameter *T, *F, *R; juce::Colour ring, curve; juce::String title; float last = -1, f0 = 0, r0 = 0;
+};
+
 // A knob wired to one parameter (or disabled at the mockup's resting angle when there is none).
 class Knob : public juce::Slider
 {
@@ -408,11 +459,11 @@ class Content : public juce::Component, private juce::Timer
 public:
     std::function<void()> onZoom, onInfo, onAll, onReset100;
     Content(juce::AudioProcessor& p) : proc(p) { setSize(kW, kH); setOpaque(true); startTimerHz(20); }
-    ~Content() override { stopTimer(); knobs.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); }
+    ~Content() override { stopTimer(); knobs.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); filterDials.clear(); }
 
     void showPage(const juce::String& key)
     {
-        knobs.clear(); dials.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); live.clear(); skip.clear(); shown.clear(); picker.reset(); page = key; data = PageData::load(key); const auto& ids = knobMap().at(key);
+        knobs.clear(); dials.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); filterDials.clear(); live.clear(); skip.clear(); shown.clear(); picker.reset(); page = key; data = PageData::load(key); const auto& ids = knobMap().at(key);
         for (size_t i = 0; i < data->knobs.size(); ++i)
         {
             juce::RangedAudioParameter* prm = nullptr;
@@ -435,24 +486,41 @@ public:
     {
         if (!data) return;
         // the menu rows "Oscillator 1..3" show semitone and cents of that oscillator, on every page
-        static const char* semi[3] = { "cc_26", "cc_37", "cc_48" }; static const char* cents[3] = { "cc_27", "cc_39", "cc_49" }; int ns = 0, nc = 0;
+        static const char* semi[3] = { "cc_26", "cc_37", "cc_48" }; static const char* cents[3] = { "cc_27", "cc_39", "cc_49" }; int ns = 0, nc = 0, nf = 0;
         for (size_t i = 0; i < data->runs.size(); ++i)
         {
             const auto& r = data->runs[i]; if (r.r.getX() > 330) continue;
             if (r.t.endsWith(" Semi") && ns < 3) { if (auto* p = find(semi[ns++])) live[(int) i] = [p] { return Field::text(p, true) + " Semi"; }; }
+            else if (r.t.length() >= 4 && (r.t.startsWith("LP") || r.t.startsWith("BP") || r.t.startsWith("HP")) && r.t.containsAnyOf("0123456789") && nf < 2) { if (auto* p = find(nf++ == 0 ? "cc_68" : "cc_82")) live[(int) i] = [p] { return juce::String(filterType(juce::roundToInt(pget(p))).name); }; }
             else if (r.t.endsWith(" Detune") && nc < 3) { if (auto* p = find(cents[nc++])) live[(int) i] = [p] { return Field::text(p, true) + " Detune"; }; }
         }
+        if (key == "filter") { bindMixerAndEnvelope(false); return; }
         if (key != "osc") return;
         auto box = [this](int run, const char* id, bool centred) {
             auto* p = find(id); if (!p) return; const auto& r = data->runs[(size_t) run]; skip.insert(run);
             auto f = std::make_unique<Field>(p, centred, r, juce::Rectangle<float>(40, 20).withCentre(r.r.getCentre())); addAndMakeVisible(*f); fields.push_back(std::move(f)); };
         box(78, "cc_26", true); box(79, "cc_28", true); box(104, "cc_37", true); box(105, "cc_40", true); box(130, "cc_48", true); box(131, "cc_50", true);
         box(171, "cc_14", false);
+        bindMixerAndEnvelope(true);
+    }
+    // Mixer faders, the six envelope bars and the envelope graph (same layout on the Oscillators page for the amp envelope and on the Filter page for the filter envelope).
+    void bindMixerAndEnvelope(bool amp)
+    {
         static const char* mix[6] = { "cc_51", "cc_52", "cc_53", "cc_54", "cc_55", "cc_56" }; static const char* mixName[6] = { "Osc 1 level", "Osc 2 level", "Osc 3 level", "Ring mod 1*3 level", "Ring mod 2*3 level", "Noise level" };
         for (size_t i = 0; i < data->faders.size() && i < 6; ++i) { auto f = std::make_unique<Fader>(find(mix[i]), mixName[i], data->faders[i]); addAndMakeVisible(*f); faders.push_back(std::move(f)); }
-        static const char* bid[6] = { "cc_115", "cc_116", "cc_112", "cc_113", "cc_109", "cc_110" }; static const char* bname[6] = { "Amp env attack slope", "Amp env decay slope", "Amp env attack track", "Amp env decay track", "Amp env sustain rate", "Amp env sustain time" };
-        for (size_t i = 0; i < data->bars.size() && i < 6; ++i) { auto b = std::make_unique<Bar>(find(bid[i]), bname[i], data->bars[i]); addAndMakeVisible(*b); bars.push_back(std::move(b)); }
-        if (!data->env.isEmpty()) { envGraph = std::make_unique<EnvGraph>(find("cc_73"), find("cc_75"), find("cc_70"), find("cc_110"), find("cc_72"), data->env); addAndMakeVisible(*envGraph); }
+        static const char* ampBar[6] = { "cc_115", "cc_116", "cc_112", "cc_113", "cc_109", "cc_110" }; static const char* filBar[6] = { "nrpn_0_11", "nrpn_0_12", "nrpn_0_8", "nrpn_0_9", "nrpn_0_5", "nrpn_0_6" };
+        static const char* bname[6] = { "attack slope", "decay slope", "attack track", "decay track", "sustain rate", "sustain time" };
+        for (size_t i = 0; i < data->bars.size() && i < 6; ++i) { auto b = std::make_unique<Bar>(find(amp ? ampBar[i] : filBar[i]), juce::String(amp ? "Amp env " : "Filter env ") + bname[i], data->bars[i]); addAndMakeVisible(*b); bars.push_back(std::move(b)); }
+        if (!data->env.isEmpty())
+        {
+            envGraph = amp ? std::make_unique<EnvGraph>(find("cc_73"), find("cc_75"), find("cc_70"), find("cc_110"), find("cc_72"), data->env) : std::make_unique<EnvGraph>(find("nrpn_0_1"), find("nrpn_0_2"), find("nrpn_0_3"), find("nrpn_0_6"), find("nrpn_0_4"), data->env);
+            addAndMakeVisible(*envGraph);
+        }
+        if (!amp)
+        {
+            static const char* t[2] = { "cc_68", "cc_82" }; static const char* f[2] = { "cc_74", "cc_83" }; static const char* r[2] = { "cc_71", "cc_85" };
+            for (size_t i = 0; i < data->filterDials.size() && i < 2; ++i) { auto d = std::make_unique<FilterDial>(find(t[i]), find(f[i]), find(r[i]), data->filterDials[i].ring, data->filterDials[i].curve, data->filterDials[i].rect, "Filter " + juce::String((int) i + 1)); addAndMakeVisible(*d); filterDials.push_back(std::move(d)); }
+        }
     }
     // the little waveform in the menu rows follows the waveform and pulse width of its oscillator
     juce::String iconSignature() const
@@ -479,7 +547,7 @@ public:
     }
     void timerCallback() override
     {
-        for (auto& f : fields) f->refresh(); for (auto& f : faders) f->refresh(); for (auto& b : bars) b->refresh(); if (envGraph) envGraph->refresh();
+        for (auto& f : fields) f->refresh(); for (auto& f : faders) f->refresh(); for (auto& b : bars) b->refresh(); if (envGraph) envGraph->refresh(); for (auto& f : filterDials) f->refresh();
         if (data) { auto sg = iconSignature(); if (sg != iconSig) { iconSig = sg; repaint(0, 0, 340, kH); } }
         for (auto& [i, fn] : live) { auto t = fn(); if (shown[i] != t) { shown[i] = t; repaint(data->runs[(size_t) i].r.expanded(8, 4).toNearestInt()); } }
     }
@@ -498,8 +566,9 @@ public:
         if (data && data->art.isValid()) { g.setImageResamplingQuality(juce::Graphics::highResamplingQuality); g.drawImage(data->art, 0, 0, kW, kH, 0, 0, data->art.getWidth(), data->art.getHeight()); }
         if (data) for (size_t ri = 0; ri < data->runs.size(); ++ri)
         {
-            auto& r = data->runs[ri]; if (skip.count((int) ri)) continue; auto lv = live.find((int) ri); const juce::String txt = lv != live.end() ? lv->second() : r.t;
+            auto& r = data->runs[ri]; if (skip.count((int) ri) || r.t.startsWith("14 types:")) continue; auto lv = live.find((int) ri); const juce::String txt = lv != live.end() ? lv->second() : r.t;
             g.setColour(r.col); g.setFont(r.font);
+            if (lv != live.end()) { const float w = textWidth(r.font, txt), mw = r.r.getWidth() + 6.0f; if (w > mw) g.setFont(r.font.withHeight(r.font.getHeight() * mw / w)); }
             if (r.rot % 180 != 0) { const auto c = r.r.getCentre(); g.saveState(); g.addTransform(juce::AffineTransform::rotation(juce::degreesToRadians((float) r.rot), c.x, c.y));
                 g.drawText(txt, juce::Rectangle<float>(r.r.getHeight(), r.r.getWidth()).withCentre(c), juce::Justification::centred, false); g.restoreState(); }
             else g.drawText(txt, r.r.expanded(10, 0), juce::Justification::centred, false);
@@ -539,7 +608,7 @@ public:
     }
 private:
     juce::AudioProcessor& proc; KnobLook look; juce::String page; std::unique_ptr<PageData> data; std::vector<std::unique_ptr<Knob>> knobs; std::vector<std::unique_ptr<WaveDial>> dials; std::unique_ptr<WavePicker> picker;
-    std::vector<std::unique_ptr<Field>> fields; std::vector<std::unique_ptr<Fader>> faders; std::vector<std::unique_ptr<Bar>> bars; std::unique_ptr<EnvGraph> envGraph; std::map<int, std::function<juce::String()>> live; std::set<int> skip; std::map<int, juce::String> shown; juce::String iconSig;
+    std::vector<std::unique_ptr<Field>> fields; std::vector<std::unique_ptr<Fader>> faders; std::vector<std::unique_ptr<Bar>> bars; std::unique_ptr<EnvGraph> envGraph; std::vector<std::unique_ptr<FilterDial>> filterDials; std::map<int, std::function<juce::String()>> live; std::set<int> skip; std::map<int, juce::String> shown; juce::String iconSig;
 };
 
 class Editor : public juce::AudioProcessorEditor

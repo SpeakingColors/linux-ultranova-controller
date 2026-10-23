@@ -93,6 +93,71 @@ a{color:#E6E8EC}a:hover{color:#FFFFFF}
 <div style="position: absolute; left: 7px; top: 7px; width: 28px; height: 28px; transform: rotate(0deg)"><div style="position: absolute; left: 50%; top: 3.9px; width: 2px; height: 7.3px; margin-left: -1px; border-radius: 1px; background: #1C1E22; box-shadow: 0 0 1px rgba(255,255,255,0.6)"></div></div></div><span style="font-size: 10px; color: #A9AFBA; text-align: center; line-height: 1.1">Level Track</span></div></div><div style="display: flex; gap: 6px; align-items: center; font-size: 10px; color: #A9AFBA"><span>Mono</span><span style="display: inline-flex; align-items: center; justify-content: center; width: 70px; height: 18px; border-radius: 2px; background: #0E0F12; border: 1px solid #3B3E45; color: #DCE3F0; font-size: 10px">Legato</span><span style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 18px; border-radius: 2px; background: #0E0F12; border: 1px solid #3B3E45; color: #DCE3F0; font-size: 10px">C 3</span></div><div style="display: flex; gap: 6px; align-items: center; font-size: 10px; color: #A9AFBA"><span>Touch</span><span style="display: inline-flex; align-items: center; justify-content: center; width: 70px; height: 18px; border-radius: 2px; background: #0E0F12; border: 1px solid #3B3E45; color: #DCE3F0; font-size: 10px">Off</span></div></div></div></section></div><span style="font-size: 10px; color: #CBD3E6">14 types: LP6NoRes · LP12 · LP18 · LP24 · BP6/6 · BP12/12 · BP6/12 · BP12/6 · BP6/18 · BP18/6 · HP6NoRes · HP12 · HP18 · HP24</span><div style="position: absolute; bottom: 0; left: 0; right: 0; height: 28px; background: #2B3040; border-top: 2px solid #8A9BC4; box-shadow: 0 -6px 10px rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; letter-spacing: .06em; color: #F2F4F8">UltraNova Controller</div></main>
 </div><div aria-hidden="true" class="wood-cheek" style="width: 34px; flex: none; align-self: stretch; background: linear-gradient(90deg,rgb(29,18,10) 0px 1px,rgb(27,17,9) 1px 2px,rgb(36,22,12) 2px 3px,rgb(40,25,14) 3px 4px,rgb(44,28,15) 4px 5px,rgb(43,27,16) 5px 6px,rgb(57,36,20) 6px 7px,rgb(63,39,22) 7px 8px,rgb(68,43,24) 8px 9px,rgb(66,42,24) 9px 10px,rgb(70,44,25) 10px 11px,rgb(81,52,30) 11px 12px,rgb(70,45,26) 12px 13px,rgb(86,56,32) 13px 14px,rgb(90,58,33) 14px 15px,rgb(93,61,34) 15px 16px,rgb(83,53,32) 16px 17px,rgb(102,65,39) 17px 18px,rgb(103,68,40) 18px 19px,rgb(107,70,41) 19px 20px,rgb(99,65,38) 20px 21px,rgb(106,70,41) 21px 22px,rgb(103,68,40) 22px 23px,rgb(82,54,31) 23px 24px,rgb(93,61,35) 24px 25px,rgb(89,58,33) 25px 26px,rgb(86,55,32) 26px 27px,rgb(69,46,26) 27px 28px,rgb(79,51,29) 28px 29px,rgb(75,47,28) 29px 30px,rgb(70,45,25) 30px 31px,rgb(60,38,21) 31px 32px,rgb(61,38,22) 32px 33px,rgb(55,36,20) 33px 34px,rgb(42,27,15) 34px 35px); box-shadow: none; border-radius: 0 6px 6px 0"></div></div>
 </x-dc>
+<script>
+(function(){
+// ---- live mixer faders, envelope bars and the amp envelope graph (same behaviour as the plugin window) ----
+function setupMix(){
+  var fs=[].slice.call(document.querySelectorAll('div[style*="width: 8px"][style*="height: 54px"]'));
+  var bars=[].slice.call(document.querySelectorAll('div[style*="height: 3px"][style*="background: #2C3B52"]'));
+  var navRow=[].slice.call(document.querySelectorAll('nav a')).filter(function(a){var f=a.querySelector('span');return f&&f.textContent.trim()==='Mixer';})[0];
+  var nb=navRow?[].slice.call(navRow.querySelectorAll('span[style*="width: 4px"]')):[];
+  var env=document.querySelector('svg[aria-label="Envelope shape"]');
+  function num(x,def){x=parseFloat(x);return isNaN(x)?def:x;}
+  var fv=fs.map(function(f){var h=num(f.firstElementChild&&f.firstElementChild.style.height,2);return h<=4?0:Math.round(Math.min(1,h/52)*127);});
+  var bv=bars.map(function(b){return Math.round(num(b.firstElementChild.style.width,0)/100*127);});
+  var E={a:10,d:70,s:45,t:95,r:50};
+  function drawF(i){var f=fs[i],inner=f.firstElementChild,v=fv[i];inner.style.height=Math.max(2,v/127*52)+'px';inner.style.background=v>0?'linear-gradient(0deg,#4BE38A,#C8FFD9)':'#333';
+    if(nb[i]){nb[i].style.height=(3+v/127*11)+'px';nb[i].style.background=v>0?'#FFFFFF':'#555';}}
+  fs.forEach(function(f,i){var col=f.parentElement;col.style.cursor='ns-resize';col.style.touchAction='none';col.title=['Osc 1','Osc 2','Osc 3','Ring mod 1*3','Ring mod 2*3','Noise'][i]+' level: drag up or down, wheel, double click sets 0';
+    function at(ev){var r=f.getBoundingClientRect();fv[i]=Math.max(0,Math.min(127,Math.round(127*(r.bottom-ev.clientY)/r.height)));drawF(i);}
+    col.addEventListener('pointerdown',function(e){e.preventDefault();col.setPointerCapture(e.pointerId);at(e);function mv(ev){at(ev);}function up(){col.removeEventListener('pointermove',mv);col.removeEventListener('pointerup',up);}col.addEventListener('pointermove',mv);col.addEventListener('pointerup',up);});
+    col.addEventListener('wheel',function(e){e.preventDefault();fv[i]=Math.max(0,Math.min(127,fv[i]+(e.deltaY<0?2:-2)));drawF(i);},{passive:false});
+    col.addEventListener('dblclick',function(){fv[i]=0;drawF(i);});drawF(i);});
+  var bn=['Attack slope','Decay slope','Attack track','Decay track','Sustain rate','Sustain time'];
+  function drawB(i){bars[i].firstElementChild.style.width=(bv[i]/127*100)+'%';if(i===5)E.t=bv[5];}
+  bars.forEach(function(b,i){var box=b.parentElement;box.style.cursor='ew-resize';box.style.touchAction='none';box.title='Filter envelope '+bn[i].toLowerCase()+': drag left or right, wheel';
+    function at(ev){var r=b.getBoundingClientRect();bv[i]=Math.max(0,Math.min(127,Math.round(127*(ev.clientX-r.left)/r.width)));drawB(i);if(i===5)drawE();}
+    box.addEventListener('pointerdown',function(e){e.preventDefault();box.setPointerCapture(e.pointerId);at(e);function mv(ev){at(ev);}function up(){box.removeEventListener('pointermove',mv);box.removeEventListener('pointerup',up);}box.addEventListener('pointermove',mv);box.addEventListener('pointerup',up);});
+    box.addEventListener('wheel',function(e){e.preventDefault();bv[i]=Math.max(0,Math.min(127,bv[i]+(e.deltaY<0?2:-2)));drawB(i);if(i===5)drawE();},{passive:false});});
+  // envelope graph: viewBox 300 x 120, same maths as the plugin (illustrative time scale)
+  function pts(){var wa=24+E.a/127*70,wd=24+E.d/127*70,ws=24+E.t/127*50,wr=24+E.r/127*70,k=Math.min(1,270/(wa+wd+ws+wr)),L=10,T=10,B=104,yS=B-E.s/127*(B-T);
+    var x1=L+wa*k,x2=x1+wd*k,x3=x2+ws*k,x4=x3+wr*k;return {k:k,p:[[L,B],[x1,T],[x2,yS],[x3,yS],[x4,B]]};}
+  function drawE(){if(!env)return;var q=pts(),p=q.p,path=env.querySelector('path'),cs=env.querySelectorAll('circle'),ls=env.querySelectorAll('line');
+    path.setAttribute('d','M'+p.map(function(a){return a[0].toFixed(1)+','+a[1].toFixed(1);}).join(' L'));
+    for(var i=0;i<cs.length&&i<4;i++){cs[i].setAttribute('cx',p[i+1][0]);cs[i].setAttribute('cy',p[i+1][1]);cs[i].style.cursor='grab';}
+    for(var j=0;j<ls.length&&j<3;j++){ls[j].setAttribute('x1',p[j+1][0]);ls[j].setAttribute('x2',p[j+1][0]);}}
+  if(env){var drag=null;env.style.touchAction='none';
+    env.addEventListener('pointerdown',function(e){var r=env.getBoundingClientRect(),sx=300/r.width,sy=120/r.height,x=(e.clientX-r.left)*sx,y=(e.clientY-r.top)*sy,p=pts().p,h=0;
+      for(var i=4;i>=1;i--){if(Math.hypot(p[i][0]-x,p[i][1]-y)<12){h=i;break;}}if(!h)return;e.preventDefault();env.setPointerCapture(e.pointerId);
+      drag={h:h,x:e.clientX,y:e.clientY,v:{a:E.a,d:E.d,s:E.s,t:E.t,r:E.r},k:pts().k,sx:sx,sy:sy};});
+    env.addEventListener('pointermove',function(e){if(!drag)return;var dx=(e.clientX-drag.x)*drag.sx,dy=(e.clientY-drag.y)*drag.sy,v=drag.v,c=function(n){return Math.max(0,Math.min(127,Math.round(n)));};
+      if(drag.h===1)E.a=c(v.a+dx*127/(70*drag.k));else if(drag.h===2){E.d=c(v.d+dx*127/(70*drag.k));E.s=c(v.s-dy*127/94);}
+      else if(drag.h===3){E.t=c(v.t+dx*127/(50*drag.k));bv[5]=E.t;drawB(5);}else E.r=c(v.r+dx*127/(70*drag.k));drawE();});
+    env.addEventListener('pointerup',function(){drag=null;});env.title='Filter envelope: drag the dots (attack, decay and sustain level, sustain time, release)';drawE();}
+}
+setTimeout(setupMix,900);
+
+// ---- live filter windows: the curve follows type, frequency and resonance (knob angles) ----
+var FT={'LP6NoRes':[0,1,0,1],'LP12':[0,2,0,0],'LP18':[0,3,0,0],'LP24':[0,4,0,0],'BP6/6':[1,1,1,0],'BP12/12':[1,2,2,0],'BP6/12':[1,1,2,0],'BP12/6':[1,2,1,0],'BP6/18':[1,1,3,0],'BP18/6':[1,3,1,0],'HP6NoRes':[2,1,0,1],'HP12':[2,2,0,0],'HP18':[2,3,0,0],'HP24':[2,4,0,0]};
+function fdb(ft,fv,rv,f){var fc=20*Math.pow(1000,fv/127);function lp(x,n){return 1/Math.sqrt(1+Math.pow(x,2*n));}
+  var m=ft[0]===0?lp(f/fc,ft[1]):ft[0]===2?lp(fc/f,ft[1]):lp(f/(fc*1.6),ft[2])*lp((fc/1.6)/f,ft[1]);var db=20*Math.log10(Math.max(m,1e-4));
+  if(!ft[3]){var l=Math.log(f/fc);db+=rv/127*18*Math.exp(-l*l/(2*.14*.14));}return db;}
+function setupFilters(){
+  [].slice.call(document.querySelectorAll('svg[aria-label^="Filter "]')).forEach(function(sv){
+    var name=(sv.getAttribute('aria-label').match(/Filter \d (\S+)/)||[])[1],ft=FT[name];if(!ft)return;
+    var panel=sv.parentElement.parentElement,knobs=[].slice.call(panel.querySelectorAll('[data-knob]'));var fk=knobs[2],rk=knobs[3];if(!fk||!rk)return;
+    function ang(kb){var r=kb.querySelector('div[style*="rotate("]');var m=r&&/rotate\((-?[\d.]+)deg\)/.exec(r.getAttribute('style'));return m?parseFloat(m[1]):0;}
+    var path=sv.querySelector('path[stroke]'),first=true;
+    function draw(){var fv=(ang(fk)+135)/270*127,rv=(ang(rk)+135)/270*127,d='';
+      for(var i=0;i<=64;i++){var t=i/64,db=Math.max(-14,Math.min(14,fdb(ft,fv,rv,20*Math.pow(1000,t))));d+=(i?' L':'M')+(12+t*40).toFixed(1)+','+(32-db*.68).toFixed(1);}
+      path.setAttribute('d',d);path.setAttribute('stroke-linejoin','round');}
+    [fk,rk].forEach(function(kb){var r=kb.querySelector('div[style*="rotate("]');if(r)new MutationObserver(draw).observe(r,{attributes:true,attributeFilter:['style']});});
+    sv.style.clipPath='none';draw();
+  });
+}
+setTimeout(setupFilters,900);
+})();
+</script>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":760}}'>
 class Component extends DCLogic {
 renderVals() {

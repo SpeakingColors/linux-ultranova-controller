@@ -76,13 +76,16 @@ TEXTJS = r"""(key) => {
     a.querySelectorAll('span[style*="width: 4px"]').forEach(b => { const r = b.getBoundingClientRect(); navBars.push({ x: +(r.left - rb.left).toFixed(1), y: +(r.top - rb.top).toFixed(1), w: +r.width.toFixed(1), h: +r.height.toFixed(1) }); b.style.visibility = 'hidden'; }); });
   // Oscillators page only: the mixer faders, the six envelope bars and the envelope graph become live controls
   const faders = [], bars = []; let env = null;
-  if (key === 'osc') {
+  if (key === 'osc' || key === 'filter') {
     const R = e => { const r = e.getBoundingClientRect(); return { x: +(r.left - rb.left).toFixed(1), y: +(r.top - rb.top).toFixed(1), w: +r.width.toFixed(1), h: +r.height.toFixed(1) }; };
     root.querySelectorAll('div[style*="width: 8px"][style*="height: 54px"]').forEach(f => { faders.push(R(f)); f.style.visibility = 'hidden'; });
     root.querySelectorAll('div[style*="height: 3px"][style*="background: #2C3B52"]').forEach(f => { bars.push(R(f)); f.style.visibility = 'hidden'; });
     const sv = root.querySelector('svg[aria-label="Envelope shape"]'); if (sv) { env = R(sv); sv.style.visibility = 'hidden'; }
   }
-  return { runs, dials, navIcons, navBars, faders, bars, env };
+  // Filter page: the two round filter response windows are drawn by the plugin from type, frequency and resonance
+  const filterDials = []; if (key === 'filter') root.querySelectorAll('svg[aria-label^="Filter "]').forEach(sv => { const r = sv.getBoundingClientRect(); const ring = sv.querySelector('circle[stroke]'); const pa = sv.querySelector('path[stroke]');
+    filterDials.push({ x: +(r.left - rb.left).toFixed(1), y: +(r.top - rb.top).toFixed(1), w: +r.width.toFixed(1), h: +r.height.toFixed(1), ring: ring ? ring.getAttribute('stroke') : '#56B9E0', color: pa ? pa.getAttribute('stroke') : '#7EE3E8' }); sv.style.visibility = 'hidden'; });
+  return { runs, dials, navIcons, navBars, faders, bars, env, filterDials };
 }"""
 HIDE_TEXT = "*{color:transparent !important;text-shadow:none !important;-webkit-text-fill-color:transparent !important} svg text{display:none !important}"
 
@@ -92,7 +95,7 @@ with sync_playwright() as p:
         pg.goto("file://%s/docs/mockups/%s.dc.html" % (root, name)); pg.add_style_tag(content=FONTS)
         pg.wait_for_timeout(1500); pg.evaluate("document.fonts.ready"); pg.wait_for_timeout(500)
         info = pg.evaluate(JS, [760, 1348])
-        tx = pg.evaluate(TEXTJS, key); info["runs"] = tx["runs"]; info["dials"] = tx["dials"]; info["navIcons"] = tx["navIcons"]; info["navBars"] = tx["navBars"]; info["faders"] = tx["faders"]; info["bars"] = tx["bars"]; info["env"] = tx["env"]
+        tx = pg.evaluate(TEXTJS, key); info["runs"] = tx["runs"]; info["dials"] = tx["dials"]; info["navIcons"] = tx["navIcons"]; info["navBars"] = tx["navBars"]; info["faders"] = tx["faders"]; info["bars"] = tx["bars"]; info["env"] = tx["env"]; info["filterDials"] = tx["filterDials"]
         pg.add_style_tag(content=HIDE_TEXT); pg.wait_for_timeout(200)
         el = pg.query_selector("x-dc > :last-child")
         el.screenshot(path=os.path.join(root, "assets/ui/%s.png" % key))

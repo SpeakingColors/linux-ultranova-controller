@@ -2623,5 +2623,6 @@
  ],
  "faders": [],
  "bars": [],
- "env": null
+ "env": null,
+ "filterDials": []
 }
