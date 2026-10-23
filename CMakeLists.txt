@@ -15,7 +15,8 @@ if(EXISTS ${CMAKE_SOURCE_DIR}/third_party/JUCE/CMakeLists.txt)
     FetchContent_Declare(cat_ui GIT_REPOSITORY https://github.com/SpeakingColors/cat-ui GIT_TAG main GIT_SHALLOW TRUE)
     FetchContent_MakeAvailable(cat_ui)
 
-    juce_add_binary_data(UltraNovaControllerData SOURCES map/params.csv)
+    file(GLOB UI_ASSETS ${CMAKE_SOURCE_DIR}/assets/ui/*.png ${CMAKE_SOURCE_DIR}/assets/ui/*.json)
+    juce_add_binary_data(UltraNovaControllerData SOURCES map/params.csv ${UI_ASSETS})
     set_target_properties(UltraNovaControllerData PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
     juce_add_plugin(UltraNovaController

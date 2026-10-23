@@ -5,6 +5,7 @@
 #include <memory>
 #include "BinaryData.h"
 #include "MidiCore.h"
+#include "ui/UnovaUi.h"
 #include "catui/CatFrame.h"
 #include "catui/RenderGate.h"
 
@@ -213,5 +214,15 @@ private:
     std::unique_ptr<juce::SliderParameterAttachment> chAttach; juce::ListBox list; std::vector<int> shown;
 };
 
-juce::AudioProcessorEditor* CtlProcessor::createEditor() { return new CtlEditor(*this); }
+juce::AudioProcessorEditor* CtlProcessor::createEditor()
+{
+    // The real window is built from the mockup. The list of every parameter (CtlEditor) opens from the gear button.
+    auto* ed = new unova::Editor(*this);
+    ed->openAllParameters = [this]
+    {
+        juce::DialogWindow::LaunchOptions o; o.content.setOwned(new CtlEditor(*this)); o.dialogTitle = "All parameters"; o.componentToCentreAround = nullptr;
+        o.dialogBackgroundColour = juce::Colour(0xff161638); o.escapeKeyTriggersCloseButton = true; o.useNativeTitleBar = true; o.resizable = true; o.launchAsync();
+    };
+    return ed;
+}
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new CtlProcessor(); }
