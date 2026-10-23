@@ -86,7 +86,7 @@ static void map_tests(const std::vector<Param>& ps)
 {
     int cc_n = 0, nr = 0, n14 = 0, pr = 0, gl = 0; for (auto& p : ps) { cc_n += p.kind == Kind::CC; nr += p.kind == Kind::NRPN; n14 += p.kind == Kind::NRPN14; pr += p.kind == Kind::Pair; gl += p.isGlobal(); }
     std::printf("map: %zu entries (%d CC, %d NRPN, %d NRPN 14 bit, %d pair, %d global)\n", ps.size(), cc_n, nr, n14, pr, gl);
-    CHECK(cc_n == 107); CHECK(nr == 374); CHECK(n14 == 1); CHECK(gl == 32);
+    CHECK(cc_n == 108); CHECK(nr == 374); CHECK(n14 == 1); CHECK(gl == 32);
     // spot checks against the addresses printed in the source (typed here independently of tools/gen_map.py)
     struct K { int m, l; const char* has; int lo, hi; };
     const K ks[] = { {0, 0, "FiltEnv Velocity", 0, 127}, {0, 1, "FiltEnv Attack", 0, 127}, {0, 13, "FiltEnv Touch Trigger", 0, 127}, {0, 14, "Env3 Delay", 0, 127},
