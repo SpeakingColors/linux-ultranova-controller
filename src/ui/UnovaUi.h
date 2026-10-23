@@ -9,11 +9,13 @@
 #include <memory>
 #include <vector>
 #include "BinaryData.h"
+#include <catui/CatLookAndFeel.h>
 
 namespace unova
 {
 constexpr int kW = 1348, kH = 760;          // design size, the same for every page
-constexpr int kDefaultW = 1348;             // 100%
+constexpr int kDefaultW = 1348;
+constexpr int kCheek = 34;                  // wood cheek width in design pixels             // 100%
 
 inline juce::MemoryBlock resource(const juce::String& original)
 {
@@ -160,6 +162,7 @@ public:
     {
         g.fillAll(juce::Colour(0xff0B0B0C));
         if (data && data->art.isValid()) { g.setImageResamplingQuality(juce::Graphics::highResamplingQuality); g.drawImage(data->art, 0, 0, kW, kH, 0, 0, data->art.getWidth(), data->art.getHeight()); }
+        catui::drawWoodCheeks(g, getLocalBounds(), kCheek);   // the PurrOne wood, drawn over the cheeks baked into the artwork
     }
     void mouseDown(const juce::MouseEvent& e) override
     {
