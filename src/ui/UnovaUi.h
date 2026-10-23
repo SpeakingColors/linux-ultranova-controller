@@ -164,15 +164,16 @@ public:
         if (data && data->art.isValid()) { g.setImageResamplingQuality(juce::Graphics::highResamplingQuality); g.drawImage(data->art, 0, 0, kW, kH, 0, 0, data->art.getWidth(), data->art.getHeight()); }
         paintWood(g, { 0, 0, kCheek, kH }, true); paintWood(g, { kW - kCheek, 0, kCheek, kH }, false);   // the PurrOne wood, drawn over the cheeks baked into the artwork
     }
-    // The same wood as PurrOne and the other plugins: dark banded grain with a shadow toward the inside.
+    // The wood of the PurrOne mockup: fine vertical grain, dark at both edges and lit in the middle like a rounded cheek.
+    // The 35 colours are measured from the approved PurrOne mockup (left cheek, outer edge first).
     static void paintWood(juce::Graphics& g, juce::Rectangle<int> r, bool left)
     {
-        const juce::Colour c[4] = { juce::Colour(0xff5B3A22), juce::Colour(0xff6E4729), juce::Colour(0xff4E3120), juce::Colour(0xff77502F) };
-        const int w[4] = { 3, 4, 2, 5 }; int x = r.getX(), i = left ? 0 : 1;
-        while (x < r.getRight()) { g.setColour(c[i & 3]); g.fillRect(x, r.getY(), juce::jmin(w[i & 3], r.getRight() - x), r.getHeight()); x += w[i & 3]; ++i; }
-        const float x0 = left ? (float) r.getRight() - 8.0f : (float) r.getX(), x1 = left ? (float) r.getRight() : (float) r.getX() + 8.0f;
-        g.setGradientFill(juce::ColourGradient(juce::Colours::black.withAlpha(left ? 0.0f : 0.6f), x0, 0.0f, juce::Colours::black.withAlpha(left ? 0.6f : 0.0f), x1, 0.0f, false));
-        g.fillRect(juce::Rectangle<float>(juce::jmin(x0, x1), (float) r.getY(), 8.0f, (float) r.getHeight()));
+        static const uint32_t col[35] = { 0x2A1B0F, 0x372414, 0x3D2616, 0x3C2615, 0x462D19, 0x4B2F1C, 0x4F331D, 0x452E1A, 0x563720, 0x593A21, 0x5D3D23, 0x52361F, 0x674428, 0x6A4629, 0x634126, 0x6B4629, 0x674428, 0x664127, 0x533520, 0x5D3D22, 0x5A3A21, 0x563820, 0x462D1A, 0x51341E, 0x462C19, 0x422A18, 0x442B18, 0x3F2716, 0x392414, 0x2B1B10, 0x2C1C0F, 0x28190E, 0x24160C, 0x1B1109, 0x1D120A };
+        for (int i = 0; i < r.getWidth(); ++i)
+        {
+            const int k = juce::jlimit(0, 34, i * 35 / juce::jmax(1, r.getWidth()));
+            g.setColour(juce::Colour(0xff000000u | col[left ? k : 34 - k])); g.fillRect(r.getX() + i, r.getY(), 1, r.getHeight());
+        }
     }
     void mouseDown(const juce::MouseEvent& e) override
     {
