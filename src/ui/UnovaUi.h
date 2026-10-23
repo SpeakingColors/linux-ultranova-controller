@@ -162,7 +162,17 @@ public:
     {
         g.fillAll(juce::Colour(0xff0B0B0C));
         if (data && data->art.isValid()) { g.setImageResamplingQuality(juce::Graphics::highResamplingQuality); g.drawImage(data->art, 0, 0, kW, kH, 0, 0, data->art.getWidth(), data->art.getHeight()); }
-        catui::drawWoodCheeks(g, getLocalBounds(), kCheek);   // the PurrOne wood, drawn over the cheeks baked into the artwork
+        paintWood(g, { 0, 0, kCheek, kH }, true); paintWood(g, { kW - kCheek, 0, kCheek, kH }, false);   // the PurrOne wood, drawn over the cheeks baked into the artwork
+    }
+    // The same wood as PurrOne and the other plugins: dark banded grain with a shadow toward the inside.
+    static void paintWood(juce::Graphics& g, juce::Rectangle<int> r, bool left)
+    {
+        const juce::Colour c[4] = { juce::Colour(0xff5B3A22), juce::Colour(0xff6E4729), juce::Colour(0xff4E3120), juce::Colour(0xff77502F) };
+        const int w[4] = { 3, 4, 2, 5 }; int x = r.getX(), i = left ? 0 : 1;
+        while (x < r.getRight()) { g.setColour(c[i & 3]); g.fillRect(x, r.getY(), juce::jmin(w[i & 3], r.getRight() - x), r.getHeight()); x += w[i & 3]; ++i; }
+        const float x0 = left ? (float) r.getRight() - 8.0f : (float) r.getX(), x1 = left ? (float) r.getRight() : (float) r.getX() + 8.0f;
+        g.setGradientFill(juce::ColourGradient(juce::Colours::black.withAlpha(left ? 0.0f : 0.6f), x0, 0.0f, juce::Colours::black.withAlpha(left ? 0.6f : 0.0f), x1, 0.0f, false));
+        g.fillRect(juce::Rectangle<float>(juce::jmin(x0, x1), (float) r.getY(), 8.0f, (float) r.getHeight()));
     }
     void mouseDown(const juce::MouseEvent& e) override
     {
