@@ -254,6 +254,48 @@ function setupLive(){
   });
 }
 setTimeout(setupLive,900);
+
+// ---- live mixer faders, envelope bars and the amp envelope graph (same behaviour as the plugin window) ----
+function setupMix(){
+  var fs=[].slice.call(document.querySelectorAll('div[style*="width: 8px"][style*="height: 54px"]'));
+  var bars=[].slice.call(document.querySelectorAll('div[style*="height: 3px"][style*="background: #2C3B52"]'));
+  var navRow=[].slice.call(document.querySelectorAll('nav a')).filter(function(a){var f=a.querySelector('span');return f&&f.textContent.trim()==='Mixer';})[0];
+  var nb=navRow?[].slice.call(navRow.querySelectorAll('span[style*="width: 4px"]')):[];
+  var env=document.querySelector('svg[aria-label="Envelope shape"]');
+  function num(x,def){x=parseFloat(x);return isNaN(x)?def:x;}
+  var fv=fs.map(function(f){var h=num(f.firstElementChild&&f.firstElementChild.style.height,2);return h<=4?0:Math.round(Math.min(1,h/52)*127);});
+  var bv=bars.map(function(b){return Math.round(num(b.firstElementChild.style.width,0)/100*127);});
+  var E={a:22,d:45,s:57,t:127,r:60};
+  function drawF(i){var f=fs[i],inner=f.firstElementChild,v=fv[i];inner.style.height=Math.max(2,v/127*52)+'px';inner.style.background=v>0?'linear-gradient(0deg,#4BE38A,#C8FFD9)':'#333';
+    if(nb[i]){nb[i].style.height=(3+v/127*11)+'px';nb[i].style.background=v>0?'#FFFFFF':'#555';}}
+  fs.forEach(function(f,i){var col=f.parentElement;col.style.cursor='ns-resize';col.style.touchAction='none';col.title=['Osc 1','Osc 2','Osc 3','Ring mod 1*3','Ring mod 2*3','Noise'][i]+' level: drag up or down, wheel, double click sets 0';
+    function at(ev){var r=f.getBoundingClientRect();fv[i]=Math.max(0,Math.min(127,Math.round(127*(r.bottom-ev.clientY)/r.height)));drawF(i);}
+    col.addEventListener('pointerdown',function(e){e.preventDefault();col.setPointerCapture(e.pointerId);at(e);function mv(ev){at(ev);}function up(){col.removeEventListener('pointermove',mv);col.removeEventListener('pointerup',up);}col.addEventListener('pointermove',mv);col.addEventListener('pointerup',up);});
+    col.addEventListener('wheel',function(e){e.preventDefault();fv[i]=Math.max(0,Math.min(127,fv[i]+(e.deltaY<0?2:-2)));drawF(i);},{passive:false});
+    col.addEventListener('dblclick',function(){fv[i]=0;drawF(i);});drawF(i);});
+  var bn=['Attack slope','Decay slope','Attack track','Decay track','Sustain rate','Sustain time'];
+  function drawB(i){bars[i].firstElementChild.style.width=(bv[i]/127*100)+'%';if(i===5)E.t=bv[5];}
+  bars.forEach(function(b,i){var box=b.parentElement;box.style.cursor='ew-resize';box.style.touchAction='none';box.title='Amp envelope '+bn[i].toLowerCase()+': drag left or right, wheel';
+    function at(ev){var r=b.getBoundingClientRect();bv[i]=Math.max(0,Math.min(127,Math.round(127*(ev.clientX-r.left)/r.width)));drawB(i);if(i===5)drawE();}
+    box.addEventListener('pointerdown',function(e){e.preventDefault();box.setPointerCapture(e.pointerId);at(e);function mv(ev){at(ev);}function up(){box.removeEventListener('pointermove',mv);box.removeEventListener('pointerup',up);}box.addEventListener('pointermove',mv);box.addEventListener('pointerup',up);});
+    box.addEventListener('wheel',function(e){e.preventDefault();bv[i]=Math.max(0,Math.min(127,bv[i]+(e.deltaY<0?2:-2)));drawB(i);if(i===5)drawE();},{passive:false});});
+  // envelope graph: viewBox 300 x 120, same maths as the plugin (illustrative time scale)
+  function pts(){var wa=24+E.a/127*70,wd=24+E.d/127*70,ws=24+E.t/127*50,wr=24+E.r/127*70,k=Math.min(1,270/(wa+wd+ws+wr)),L=10,T=10,B=104,yS=B-E.s/127*(B-T);
+    var x1=L+wa*k,x2=x1+wd*k,x3=x2+ws*k,x4=x3+wr*k;return {k:k,p:[[L,B],[x1,T],[x2,yS],[x3,yS],[x4,B]]};}
+  function drawE(){if(!env)return;var q=pts(),p=q.p,path=env.querySelector('path'),cs=env.querySelectorAll('circle'),ls=env.querySelectorAll('line');
+    path.setAttribute('d','M'+p.map(function(a){return a[0].toFixed(1)+','+a[1].toFixed(1);}).join(' L'));
+    for(var i=0;i<cs.length&&i<4;i++){cs[i].setAttribute('cx',p[i+1][0]);cs[i].setAttribute('cy',p[i+1][1]);cs[i].style.cursor='grab';}
+    for(var j=0;j<ls.length&&j<3;j++){ls[j].setAttribute('x1',p[j+1][0]);ls[j].setAttribute('x2',p[j+1][0]);}}
+  if(env){var drag=null;env.style.touchAction='none';
+    env.addEventListener('pointerdown',function(e){var r=env.getBoundingClientRect(),sx=300/r.width,sy=120/r.height,x=(e.clientX-r.left)*sx,y=(e.clientY-r.top)*sy,p=pts().p,h=0;
+      for(var i=4;i>=1;i--){if(Math.hypot(p[i][0]-x,p[i][1]-y)<12){h=i;break;}}if(!h)return;e.preventDefault();env.setPointerCapture(e.pointerId);
+      drag={h:h,x:e.clientX,y:e.clientY,v:{a:E.a,d:E.d,s:E.s,t:E.t,r:E.r},k:pts().k,sx:sx,sy:sy};});
+    env.addEventListener('pointermove',function(e){if(!drag)return;var dx=(e.clientX-drag.x)*drag.sx,dy=(e.clientY-drag.y)*drag.sy,v=drag.v,c=function(n){return Math.max(0,Math.min(127,Math.round(n)));};
+      if(drag.h===1)E.a=c(v.a+dx*127/(70*drag.k));else if(drag.h===2){E.d=c(v.d+dx*127/(70*drag.k));E.s=c(v.s-dy*127/94);}
+      else if(drag.h===3){E.t=c(v.t+dx*127/(50*drag.k));bv[5]=E.t;drawB(5);}else E.r=c(v.r+dx*127/(70*drag.k));drawE();});
+    env.addEventListener('pointerup',function(){drag=null;});env.title='Amp envelope: drag the dots (attack, decay and sustain level, sustain time, release)';drawE();}
+}
+setTimeout(setupMix,900);
 })();
 </script>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":679}}'>
