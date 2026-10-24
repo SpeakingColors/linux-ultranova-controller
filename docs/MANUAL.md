@@ -1,6 +1,6 @@
 # Linux UltraNova Controller: manual (draft)
 
-Status: design stage. The behavior below is what the mockups do today and what the plugin should copy.
+Status: the plugin window follows the mockups page by page. The full user manual is the PDF in this folder; this file keeps the design notes.
 
 ## Oscillator waveform displays
 

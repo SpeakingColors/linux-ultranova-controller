@@ -178,6 +178,13 @@ function setupFilters(){
   });
 }
 setTimeout(setupFilters,900);
+// ---- routing tiles: click to choose (list order assumed, like in the plugin) ----
+setTimeout(function(){
+  var hd=[].slice.call(document.querySelectorAll('div')).filter(function(d){return d.children.length===0&&d.textContent.trim()==='Routing';})[0];
+  var grid=hd&&hd.nextElementSibling;if(!grid)return;var tiles=[].slice.call(grid.children);
+  function pick(i){tiles.forEach(function(t,k){t.style.borderColor=k===i?'#7EE3E8':'#3A3D44';});}
+  tiles.forEach(function(t,i){t.style.cursor='pointer';t.title='Filter routing: click to choose (list order assumed)';t.addEventListener('click',function(){pick(i);});});
+},900);
 })();
 </script>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":760}}'>

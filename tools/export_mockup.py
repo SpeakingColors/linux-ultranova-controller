@@ -87,7 +87,9 @@ TEXTJS = r"""(key) => {
     filterDials.push({ x: +(r.left - rb.left).toFixed(1), y: +(r.top - rb.top).toFixed(1), w: +r.width.toFixed(1), h: +r.height.toFixed(1), ring: ring ? ring.getAttribute('stroke') : '#56B9E0', color: pa ? pa.getAttribute('stroke') : '#7EE3E8' }); sv.style.visibility = 'hidden'; });
   // Modulation page: the LFO waveform window is drawn by the plugin from the LFO waveform control
   const lfoWins = []; if (key === 'mod') root.querySelectorAll('svg[aria-label^="LFO"][role="img"]').forEach(sv => { const r = sv.getBoundingClientRect(); lfoWins.push({ x: +(r.left - rb.left).toFixed(1), y: +(r.top - rb.top).toFixed(1), w: +r.width.toFixed(1), h: +r.height.toFixed(1) }); sv.style.visibility = 'hidden'; });
-  return { runs, dials, navIcons, navBars, faders, bars, env, filterDials, lfoWins };
+  // Filter page: the six routing tiles are drawn by the plugin from the Filter Configuration control
+  const routeTiles = []; if (key === 'filter') { const hd = [...root.querySelectorAll('div')].find(d => d.children.length === 0 && d.textContent.trim() === 'Routing'); const grid = hd && hd.nextElementSibling; if (grid) [...grid.children].forEach(t => { const r = t.getBoundingClientRect(); routeTiles.push({ x: +(r.left - rb.left).toFixed(1), y: +(r.top - rb.top).toFixed(1), w: +r.width.toFixed(1), h: +r.height.toFixed(1) }); t.style.visibility = 'hidden'; }); }
+  return { runs, dials, navIcons, navBars, faders, bars, env, filterDials, lfoWins, routeTiles };
 }"""
 HIDE_TEXT = "*{color:transparent !important;text-shadow:none !important;-webkit-text-fill-color:transparent !important} svg text{display:none !important}"
 
@@ -97,7 +99,7 @@ with sync_playwright() as p:
         pg.goto("file://%s/docs/mockups/%s.dc.html" % (root, name)); pg.add_style_tag(content=FONTS)
         pg.wait_for_timeout(1500); pg.evaluate("document.fonts.ready"); pg.wait_for_timeout(500)
         info = pg.evaluate(JS, [760, 1348])
-        tx = pg.evaluate(TEXTJS, key); info["runs"] = tx["runs"]; info["dials"] = tx["dials"]; info["navIcons"] = tx["navIcons"]; info["navBars"] = tx["navBars"]; info["faders"] = tx["faders"]; info["bars"] = tx["bars"]; info["env"] = tx["env"]; info["filterDials"] = tx["filterDials"]; info["lfoWins"] = tx["lfoWins"]
+        tx = pg.evaluate(TEXTJS, key); info["runs"] = tx["runs"]; info["dials"] = tx["dials"]; info["navIcons"] = tx["navIcons"]; info["navBars"] = tx["navBars"]; info["faders"] = tx["faders"]; info["bars"] = tx["bars"]; info["env"] = tx["env"]; info["filterDials"] = tx["filterDials"]; info["lfoWins"] = tx["lfoWins"]; info["routeTiles"] = tx["routeTiles"]
         pg.add_style_tag(content=HIDE_TEXT); pg.wait_for_timeout(200)
         el = pg.query_selector("x-dc > :last-child")
         el.screenshot(path=os.path.join(root, "assets/ui/%s.png" % key))

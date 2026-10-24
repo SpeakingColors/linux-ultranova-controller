@@ -1,18 +1,26 @@
 # Intro
-UltraNova Controller sends and receives the MIDI messages (CC and NRPN) of the Novation UltraNova, so you can control the synth from your DAW, automate it, and see its settings change in the plugin. It is an early build: the editor is a searchable list of every control.
+UltraNova Controller sends and receives the MIDI messages (CC and NRPN) of the Novation UltraNova, so you can control the synth from your DAW, automate it, and see its settings change in the plugin. It is an early build: the window is the full design with live pages, and some controls (the Animate and Librarian pages, the modulation matrix rows) are still pictures.
 
 # Quick start
 - On the Novation UltraNova, turn on MIDI CC receive and transmit (and NRPN where the device has the option).
 - Insert the plugin on a MIDI track whose output goes to the Novation UltraNova, and send the track's MIDI to the device. Set the plugin's MIDI channel to the one the device listens on.
 - Move a value in the list: the matching message is sent to the device. Turn a knob on the device: the value moves in the plugin.
-- Use the group menu and the search box to find a control. Send all sends every value to the device at once.
+- Use the pages in the left menu to find a control.
 - Every control is an automatable parameter in your DAW.
 
 # Honest status
-- The map has 107 entries (CC map). It was written from the maker's documentation, nothing was invented.
-- None of the 107 controls has been tested on the real device. Every control is marked "not tested on hardware yet" in the list. A range that the documentation does not print is assumed to be 0 to 127 and is marked that way.
+- The map has 483 entries (CC and NRPN). It was written from the maker's documentation, nothing was invented.
+- None of the 483 controls has been tested on the real device. Every control is marked "not tested on hardware yet" in the list. A range that the documentation does not print is assumed to be 0 to 127 and is marked that way.
 - No SysEx and no patch librarian yet. Nothing is sent that is not in the map.
 - Incoming messages from the device are consumed by the plugin and never echoed back. At most 16 values are sent per audio block so the device is not flooded.
+
+# Pages and live displays
+- The window is the approved design, drawn natively, with seven pages: Oscillators, Filter, Modulation, Effects, Global, Librarian and the left menu.
+- Oscillators: drag the waveform picture, or click for the list; semitone, detune and pitch boxes drag, wheel and reset with a double click; the six mixer faders, the amp envelope bars and the envelope graph (drag its four dots) move with the values.
+- Filter: the two filter windows show the response curve for the chosen type, frequency and resonance; click a window to pick the filter type; the drive type, portamento mode and polyphony mode open drop-down lists; the six routing tiles choose the filter routing; the filter envelope has the same draggable graph and bars.
+- Modulation: click the LFO window to pick one of the 37 waveforms; the Envelope 6 graph and its bars are draggable.
+- Lists whose order the maker's document does not print (drive types, routing, modes) use an assumed order, stated in the tooltip, until checked on a real UltraNova.
+- Values show as plain controller numbers (centred ones as minus 64 to plus 63) because the document gives no real units.
 
 # Window
 - Resize by dragging any edge or corner; the shape stays the same. Hover a control for its address (CC or NRPN number).

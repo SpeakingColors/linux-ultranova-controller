@@ -4,7 +4,7 @@
 
 Controller plugin for the Novation UltraNova and MiniNova on Linux.
 
-<p align="center"><img src="docs/screenshot.png" alt="UltraNova Controller editor" width="900"><br><sub>Screenshot of the interactive mockup in docs/mockups.</sub></p>
+<p align="center"><img src="docs/screenshot.png" alt="UltraNova Controller editor" width="900"><br><sub>Screenshot of the real plugin window (Oscillators page).</sub></p>
 
 **Manual:** [PDF, opens in the browser](https://github.com/SpeakingColors/linux-ultranova-controller/blob/main/docs/linux-ultranova-controller-manual.pdf)
 

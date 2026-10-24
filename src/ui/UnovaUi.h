@@ -83,7 +83,7 @@ struct NavSpec { juce::String page; juce::Rectangle<float> rect; };
 struct ButtonSpec { juce::String text, label; juce::Rectangle<float> rect; };
 struct PageData
 {
-    juce::Image art; std::vector<KnobSpec> knobs; std::vector<NavSpec> nav; std::vector<ButtonSpec> buttons; std::vector<TextRun> runs; std::vector<DialSpec> dials; std::vector<IconSpec> icons; std::vector<juce::Rectangle<float>> navBars, faders, bars; juce::Rectangle<float> env; std::vector<FilterDialSpec> filterDials; std::vector<juce::Rectangle<float>> lfoWins;
+    juce::Image art; std::vector<KnobSpec> knobs; std::vector<NavSpec> nav; std::vector<ButtonSpec> buttons; std::vector<TextRun> runs; std::vector<DialSpec> dials; std::vector<IconSpec> icons; std::vector<juce::Rectangle<float>> navBars, faders, bars; juce::Rectangle<float> env; std::vector<FilterDialSpec> filterDials; std::vector<juce::Rectangle<float>> lfoWins, routeTiles;
     static std::unique_ptr<PageData> load(const juce::String& key)
     {
         auto pd = std::make_unique<PageData>(); auto png = resource(key + ".png"); auto js = resource(key + ".json");
@@ -108,7 +108,7 @@ struct PageData
         list("navBars", pd->navBars); list("faders", pd->faders); list("bars", pd->bars); if (v["env"].isObject()) pd->env = rectOf(v["env"]);
         auto col = [](const juce::String& c) { return juce::Colour::fromString("ff" + c.fromFirstOccurrenceOf("#", false, false)); };
         if (auto* fs = v["filterDials"].getArray()) for (auto& d : *fs) pd->filterDials.push_back({ rectOf(d), col(d["ring"].toString()), col(d["color"].toString()) });
-        list("lfoWins", pd->lfoWins);
+        list("lfoWins", pd->lfoWins); list("routeTiles", pd->routeTiles);
         return pd;
     }
 };
@@ -463,6 +463,39 @@ private:
 };
 
 // LFO waveform names as in the maker's LFO Waveform Table; which controller value picks which name is assumed (value = position in this list).
+// The six filter routing tiles (Bypass, Single, Series, Parallel 1, Parallel 2, Drum). Click one to choose; the list order is assumed (value = tile number), stated in the tooltip.
+class RouteTiles : public juce::Component, public juce::SettableTooltipClient
+{
+public:
+    RouteTiles(juce::RangedAudioParameter* p, std::vector<juce::Rectangle<float>> t) : param(p), tiles(std::move(t))
+    {
+        juce::Rectangle<float> u; for (auto& r : tiles) u = u.isEmpty() ? r : u.getUnion(r); origin = u.getPosition(); setBounds(u.toNearestInt()); setMouseCursor(juce::MouseCursor::PointingHandCursor);
+        setTooltip("Filter routing: click a tile to choose (the order of the list is assumed, not confirmed by the maker's document)");
+    }
+    int current() const { return juce::jlimit(0, (int) tiles.size() - 1, juce::roundToInt(pget(param))); }
+    void refresh() { if (current() != last) repaint(); }
+    void paint(juce::Graphics& g) override
+    {
+        last = current();
+        for (size_t i = 0; i < tiles.size(); ++i)
+        {
+            const auto r = tiles[i].translated(-origin.x, -origin.y); const bool on = (int) i == last;
+            g.setColour(juce::Colour(0xff0B0C10)); g.fillRoundedRectangle(r, 4); g.setColour(juce::Colour(on ? 0xff7EE3E8 : 0xff3A3D44)); g.drawRoundedRectangle(r.reduced(0.5f), 4, 1);
+            const auto d = r.reduced(4).withHeight(26);
+            g.setColour(juce::Colour(0xff555555)); g.drawRect(juce::Rectangle<float>(d.getX() + 0, d.getY() + 4, 50, 14), 1.0f);
+            g.setColour(juce::Colour(0xff888888)); g.drawRect(juce::Rectangle<float>(d.getRight() - 20, d.getY() + 2, 14, 9), 1.0f);
+            g.setColour(juce::Colour(i < 2 ? 0xff333333 : 0xff888888)); g.drawRect(juce::Rectangle<float>(d.getRight() - 20, d.getBottom() - 11, 14, 9), 1.0f);
+            static const char* names[] = { "Bypass", "Single", "Series", "Parallel 1", "Parallel 2", "Drum" };
+            g.setColour(juce::Colour(0xffA9AFBA)); g.setFont(makeFont(400, false, 9.0f)); g.drawText(names[juce::jmin((int) i, 5)], juce::Rectangle<float>(r.getX() + 4, r.getY() + 30, r.getWidth() - 8, 13), juce::Justification::centredLeft);
+        }
+    }
+    void mouseDown(const juce::MouseEvent& e) override
+    {
+        for (size_t i = 0; i < tiles.size(); ++i) if (tiles[i].translated(-origin.x, -origin.y).contains(e.position)) { pset(param, (float) i); repaint(); return; }
+    }
+private:
+    juce::RangedAudioParameter* param; std::vector<juce::Rectangle<float>> tiles; juce::Point<float> origin; int last = -1;
+};
 inline const juce::StringArray& lfoNames()
 {
     static const juce::StringArray n { "Sine", "Triangle", "Sawtooth", "Square", "Rand S/H", "Time S/H", "PianoEnv", "Seq 1", "Seq 2", "Seq 3", "Seq 4", "Seq 5", "Seq 6", "Seq 7",
@@ -543,11 +576,11 @@ class Content : public juce::Component, private juce::Timer
 public:
     std::function<void()> onZoom, onInfo, onAll, onReset100;
     Content(juce::AudioProcessor& p) : proc(p) { setSize(kW, kH); setOpaque(true); startTimerHz(20); }
-    ~Content() override { stopTimer(); knobs.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); filterDials.clear(); dropdowns.clear(); lfoViews.clear(); }
+    ~Content() override { stopTimer(); knobs.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); filterDials.clear(); dropdowns.clear(); lfoViews.clear(); routeView.reset(); }
 
     void showPage(const juce::String& key)
     {
-        knobs.clear(); dials.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); filterDials.clear(); dropdowns.clear(); lfoViews.clear(); live.clear(); skip.clear(); shown.clear(); picker.reset(); page = key; data = PageData::load(key); const auto& ids = knobMap().at(key);
+        knobs.clear(); dials.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); filterDials.clear(); dropdowns.clear(); lfoViews.clear(); routeView.reset(); live.clear(); skip.clear(); shown.clear(); picker.reset(); page = key; data = PageData::load(key); const auto& ids = knobMap().at(key);
         for (size_t i = 0; i < data->knobs.size(); ++i)
         {
             juce::RangedAudioParameter* prm = nullptr;
@@ -580,7 +613,7 @@ public:
         }
         static const juce::StringArray drive { "Diode", "Valve", "Clipper", "XOver", "Rectify", "BitsDown", "RateDown" };   // names as in the maker's Distortion list
         if (key == "mod") { bindMixerAndEnvelope(2); if (!data->lfoWins.empty()) { auto l = std::make_unique<LfoWindow>(find("nrpn_0_70"), data->lfoWins[0]); addAndMakeVisible(*l); lfoViews.push_back(std::move(l)); } return; }
-        if (key == "filter") { bindMixerAndEnvelope(1); dropdown("Diode", "cc_65", drive, "Filter 1 drive type"); dropdown("XOver", "cc_81", drive, "Filter 2 drive type"); return; }
+        if (key == "filter") { bindMixerAndEnvelope(1); if (!data->routeTiles.empty()) { if (auto* rp = find("cc_60")) { routeView = std::make_unique<RouteTiles>(rp, data->routeTiles); addAndMakeVisible(*routeView); } } dropdown("Diode", "cc_65", drive, "Filter 1 drive type"); dropdown("XOver", "cc_81", drive, "Filter 2 drive type"); return; }
         if (key != "osc") return;
         auto box = [this](int run, const char* id, bool centred) {
             auto* p = find(id); if (!p) return; const auto& r = data->runs[(size_t) run]; skip.insert(run);
@@ -645,7 +678,7 @@ public:
     }
     void timerCallback() override
     {
-        for (auto& f : fields) f->refresh(); for (auto& f : faders) f->refresh(); for (auto& b : bars) b->refresh(); if (envGraph) envGraph->refresh(); for (auto& f : filterDials) f->refresh(); for (auto& d : dropdowns) d->refresh(); for (auto& l : lfoViews) l->refresh();
+        for (auto& f : fields) f->refresh(); for (auto& f : faders) f->refresh(); for (auto& b : bars) b->refresh(); if (envGraph) envGraph->refresh(); for (auto& f : filterDials) f->refresh(); for (auto& d : dropdowns) d->refresh(); for (auto& l : lfoViews) l->refresh(); if (routeView) routeView->refresh();
         if (data) { auto sg = iconSignature(); if (sg != iconSig) { iconSig = sg; repaint(0, 0, 340, kH); } }
         for (auto& [i, fn] : live) { auto t = fn(); if (shown[i] != t) { shown[i] = t; repaint(data->runs[(size_t) i].r.expanded(8, 4).toNearestInt()); } }
     }
@@ -706,7 +739,7 @@ public:
     }
 private:
     juce::AudioProcessor& proc; KnobLook look; juce::String page; std::unique_ptr<PageData> data; std::vector<std::unique_ptr<Knob>> knobs; std::vector<std::unique_ptr<WaveDial>> dials; std::unique_ptr<WavePicker> picker;
-    std::vector<std::unique_ptr<Field>> fields; std::vector<std::unique_ptr<Fader>> faders; std::vector<std::unique_ptr<Bar>> bars; std::unique_ptr<EnvGraph> envGraph; std::vector<std::unique_ptr<FilterDial>> filterDials; std::vector<std::unique_ptr<Dropdown>> dropdowns; std::vector<std::unique_ptr<LfoWindow>> lfoViews; std::map<int, std::function<juce::String()>> live; std::set<int> skip; std::map<int, juce::String> shown; juce::String iconSig;
+    std::vector<std::unique_ptr<Field>> fields; std::vector<std::unique_ptr<Fader>> faders; std::vector<std::unique_ptr<Bar>> bars; std::unique_ptr<EnvGraph> envGraph; std::vector<std::unique_ptr<FilterDial>> filterDials; std::vector<std::unique_ptr<Dropdown>> dropdowns; std::vector<std::unique_ptr<LfoWindow>> lfoViews; std::unique_ptr<RouteTiles> routeView; std::map<int, std::function<juce::String()>> live; std::set<int> skip; std::map<int, juce::String> shown; juce::String iconSig;
 };
 
 class Editor : public juce::AudioProcessorEditor
