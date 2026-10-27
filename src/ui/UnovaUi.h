@@ -81,9 +81,10 @@ struct DialSpec { juce::Rectangle<float> rect; juce::Colour color; };
 struct KnobSpec { juce::Rectangle<float> rect; float angle = 0; };
 struct NavSpec { juce::String page; juce::Rectangle<float> rect; };
 struct ButtonSpec { juce::String text, label; juce::Rectangle<float> rect; };
+struct MatrixRowSpec { int slot = 1; bool sel = false; juce::Colour bg; juce::Rectangle<float> c[5]; };
 struct PageData
 {
-    juce::Image art; std::vector<KnobSpec> knobs; std::vector<NavSpec> nav; std::vector<ButtonSpec> buttons; std::vector<TextRun> runs; std::vector<DialSpec> dials; std::vector<IconSpec> icons; std::vector<juce::Rectangle<float>> navBars, faders, bars; juce::Rectangle<float> env; std::vector<FilterDialSpec> filterDials; std::vector<juce::Rectangle<float>> lfoWins, routeTiles;
+    juce::Image art; std::vector<KnobSpec> knobs; std::vector<NavSpec> nav; std::vector<ButtonSpec> buttons; std::vector<TextRun> runs; std::vector<DialSpec> dials; std::vector<IconSpec> icons; std::vector<juce::Rectangle<float>> navBars, faders, bars; juce::Rectangle<float> env; std::vector<FilterDialSpec> filterDials; std::vector<juce::Rectangle<float>> lfoWins, routeTiles; std::vector<MatrixRowSpec> matrixRows;
     static std::unique_ptr<PageData> load(const juce::String& key)
     {
         auto pd = std::make_unique<PageData>(); auto png = resource(key + ".png"); auto js = resource(key + ".json");
@@ -109,6 +110,7 @@ struct PageData
         auto col = [](const juce::String& c) { return juce::Colour::fromString("ff" + c.fromFirstOccurrenceOf("#", false, false)); };
         if (auto* fs = v["filterDials"].getArray()) for (auto& d : *fs) pd->filterDials.push_back({ rectOf(d), col(d["ring"].toString()), col(d["color"].toString()) });
         list("lfoWins", pd->lfoWins); list("routeTiles", pd->routeTiles);
+        if (auto* mr = v["matrixRows"].getArray()) for (auto& r : *mr) { MatrixRowSpec m; m.slot = (int) r["slot"]; m.sel = (bool) r["sel"]; for (int i = 0; i < 5; ++i) m.c[i] = rectOf(r["c"][i]); pd->matrixRows.push_back(m); }
         return pd;
     }
 };
@@ -548,6 +550,108 @@ private:
 };
 
 // A knob wired to one parameter (or disabled at the mockup's resting angle when there is none).
+// The modulation matrix rows. Names come from the maker's Sources table (display names) and Destination table; which controller value picks which name is assumed (value = position in the list)
+// and only the entries printed in the tables available to us are named, the rest show as numbers.
+inline const juce::StringArray& modSourceNames()
+{
+    static const juce::StringArray n { "Direct", "ModWheel", "AftTouch", "Express", "Velocity", "Keyboard", "Lfo1+", "Lfo2+", "Lfo3+", "Lfo1+/-", "Lfo2+/-", "Lfo3+/-", "Env1Amp", "Env2Filt", "Env3", "Env4", "Env5", "Env6" };
+    return n;
+}
+inline const juce::StringArray& modDestNames()
+{
+    static const juce::StringArray n { "O123Ptch", "O1Pitch", "O2Pitch", "O3Pitch", "O1Vsync", "O2Vsync", "O3Vsync", "O1PW/Idx", "O2PW/Idx", "O3PW/Idx", "O1Hard", "O2Hard", "O3Hard",
+        "O1Level", "O2Level", "O3Level", "NoiseLvl", "RM1*3Lvl", "RM2*3Lvl", "F1DAmnt", "F2DAmnt", "F1Freq", "F2Freq", "F1Res", "F2Res", "FBalance", "L1Rate", "L2Rate", "L3Rate", "Env1Dec", "Env2Dec",
+        "FX1Amnt", "FX2Amnt", "FX3Amnt", "FX4Amnt", "FX5Amnt", "FXFedback", "FXWetDry", "Ch1Rate", "Ch1Depth", "Ch1Delay", "Ch1Fback", "Ch2Rate", "Ch2Depth", "Ch2Delay", "Ch2Fback", "Ch3Rate", "Ch3Depth", "Ch3Delay", "Ch3Fback",
+        "Ch4Rate", "Ch4Depth", "Ch4Delay", "Ch4Fback", "Dly1Time", "Dly1Fbak", "Dly2Time", "Dly2Fbak", "EQBasLvl", "EQBasFrq", "EQMidLvl", "EQMidFrq", "EQTrbLvl", "EQTrbFrq", "PanPosn" };
+    return n;
+}
+class MatrixRows : public juce::Component, public juce::TooltipClient
+{
+public:
+    MatrixRows(std::vector<MatrixRowSpec> r, const std::function<juce::RangedAudioParameter*(const juce::String&)>& find) : rows(std::move(r))
+    {
+        juce::Rectangle<float> u; for (auto& m : rows) for (auto& c : m.c) u = u.isEmpty() ? c : u.getUnion(c); origin = u.getPosition(); setBounds(u.getSmallestIntegerContainer());
+        for (auto& m : rows)
+        {
+            const int k = m.slot - 1; const int msb = k < 9 ? 1 : 2, base = k < 9 ? 83 + 5 * k : 5 * (k - 9);
+            std::array<juce::RangedAudioParameter*, 5> a; for (int j = 0; j < 5; ++j) a[(size_t) j] = find("nrpn_" + juce::String(msb) + "_" + juce::String(base + j));
+            ps.push_back({ a[0], a[1], a[2], a[4], a[3] });   // source 1, source 2, touch, destination, depth (parameter order is source1, source2, touch, depth, destination)
+        }
+        setMouseCursor(juce::MouseCursor::PointingHandCursor);
+    }
+    void refresh() { const auto sig = signature(); if (sig != last) { last = sig; repaint(); } }
+    void paint(juce::Graphics& g) override
+    {
+        last = signature();
+        for (size_t i = 0; i < rows.size(); ++i)
+        {
+            auto cell = [&](int j) { return rows[i].c[j].translated(-origin.x, -origin.y); };
+            const int s1 = val(i, 0), s2 = val(i, 1), t = val(i, 2), d = val(i, 3), dp = val(i, 4);
+            g.setFont(makeFont(400, false, 12.0f));
+            g.setColour(juce::Colour(s1 == 0 ? 0xff667788 : 0xffEEEEFF)); g.drawText(srcName(s1), cell(0), juce::Justification::centredLeft, false);
+            g.setColour(juce::Colour(s2 == 0 ? 0xff667788 : 0xffEEEEFF)); g.drawText(juce::String(juce::CharPointer_UTF8("\xc3\x97 ")) + srcName(s2), cell(1), juce::Justification::centredLeft, false);
+            g.setFont(makeFont(400, false, 11.0f)); g.setColour(juce::Colour(t == 0 ? 0xff667788 : 0xffEEEEFF)); g.drawText(t == 0 ? juce::String("None") : juce::String(t), cell(2), juce::Justification::centredLeft, false);
+            auto db = cell(3); g.setGradientFill(juce::ColourGradient(juce::Colour(0xff0D1F78), 0, db.getY(), juce::Colour(0xff1E3FB8), 0, db.getBottom(), false)); g.fillRoundedRectangle(db, 3);
+            g.setColour(juce::Colour(0xff08103A)); g.drawRoundedRectangle(db.reduced(0.5f), 3, 1);
+            g.setColour(juce::Colour(0xff8DB8FF)); g.setFont(makeFont(400, true, 17.0f)); g.drawText(destName(d), db.reduced(8, 0), juce::Justification::centredLeft, true);
+            auto bar = cell(4).withSizeKeepingCentre(cell(4).getWidth(), 10.0f); g.setGradientFill(juce::ColourGradient(juce::Colour(0xff1B2B6E), bar.getX(), 0, juce::Colour(0xff4D7BFF), bar.getRight(), 0, false)); g.fillRect(bar);
+            g.setColour(juce::Colours::white); g.fillRect(bar.getX() + (float) dp / 127.0f * bar.getWidth() - 1.0f, bar.getY() - 2, 3.0f, 14.0f);
+        }
+    }
+    void mouseDown(const juce::MouseEvent& e) override
+    {
+        const auto hit = locate(e.position); row = hit.first; col = hit.second; if (row < 0) return;
+        auto* p = ps[(size_t) row][(size_t) col]; if (!p) return; dragStart = pget(p); dragY = e.position.y;
+        if (col == 0 || col == 1 || col == 3) menu(row, col); else if (col == 4) { p->beginChangeGesture(); setDepth(e.position.x); }
+    }
+    void mouseDrag(const juce::MouseEvent& e) override
+    {
+        if (row < 0) return; auto* p = ps[(size_t) row][(size_t) col]; if (!p) return;
+        if (col == 4) setDepth(e.position.x); else if (col == 2) { p->beginChangeGesture(); pset(p, dragStart + (dragY - e.position.y) * 0.5f); p->endChangeGesture(); repaint(); }
+    }
+    void mouseUp(const juce::MouseEvent&) override { if (row >= 0 && col == 4) if (auto* p = ps[(size_t) row][4]) p->endChangeGesture(); }
+    void mouseDoubleClick(const juce::MouseEvent& e) override
+    {
+        const auto hit = locate(e.position); if (hit.first < 0) return; auto* p = ps[(size_t) hit.first][(size_t) hit.second]; if (!p) return;
+        if (hit.second == 4) { p->beginChangeGesture(); pset(p, 64); p->endChangeGesture(); repaint(); } else if (hit.second == 2) { p->beginChangeGesture(); pset(p, 0); p->endChangeGesture(); repaint(); }
+    }
+    void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& w) override
+    {
+        const auto hit = locate(e.position); if (hit.first < 0 || hit.second == 0 || hit.second == 1 || hit.second == 3) return; auto* p = ps[(size_t) hit.first][(size_t) hit.second]; if (!p) return;
+        p->beginChangeGesture(); pset(p, pget(p) + (w.deltaY > 0 ? 2.0f : -2.0f)); p->endChangeGesture(); repaint();
+    }
+    juce::String getTooltip() override
+    {
+        const auto hit = locate(getMouseXYRelative().toFloat()); if (hit.first < 0) return {};
+        const juce::String what[] = { "Source 1", "Source 2", "Touch enable (raw value, its meaning is not in the maker's document)", "Destination", "Depth (-64 to +63)" };
+        const int slot = rows[(size_t) hit.first].slot; const bool list = hit.second == 0 || hit.second == 1 || hit.second == 3;
+        return "Slot " + juce::String(slot) + ", " + what[hit.second] + (list ? ": click to choose (the list order is assumed and only the entries printed in the maker's tables are named)" : hit.second == 4 ? ": drag, wheel, double click resets to 0" : ": drag up or down, wheel, double click resets");
+    }
+private:
+    std::pair<int, int> locate(juce::Point<float> pt) const
+    {
+        for (size_t i = 0; i < rows.size(); ++i) for (int j = 0; j < 5; ++j) if (rows[i].c[j].translated(-origin.x, -origin.y).expanded(2, 1).contains(pt)) return { (int) i, j };
+        return { -1, -1 };
+    }
+    int val(size_t i, int j) const { return juce::roundToInt(pget(ps[i][(size_t) j])); }
+    juce::String srcName(int v) const { return v < modSourceNames().size() ? modSourceNames()[v] : "Src " + juce::String(v); }
+    juce::String destName(int v) const { return v < modDestNames().size() ? modDestNames()[v] : "Dest " + juce::String(v); }
+    juce::String signature() const { juce::String s; for (size_t i = 0; i < rows.size(); ++i) for (int j = 0; j < 5; ++j) s << val(i, j) << ','; return s; }
+    void setDepth(float x)
+    {
+        auto* p = ps[(size_t) row][4]; const auto c = rows[(size_t) row].c[4].translated(-origin.x, -origin.y);
+        pset(p, juce::jlimit(0.0f, 1.0f, (x - c.getX()) / c.getWidth()) * 127.0f); repaint();
+    }
+    void menu(int r, int c)
+    {
+        auto* p = ps[(size_t) r][(size_t) c]; const bool isDest = c == 3; const int count = isDest ? modDestNames().size() : modSourceNames().size(); const int cur = juce::roundToInt(pget(p));
+        juce::PopupMenu m; for (int i = 0; i < count; ++i) m.addItem(i + 1, isDest ? modDestNames()[i] : modSourceNames()[i], true, i == cur);
+        if (cur >= count) m.addItem(cur + 1, juce::String(isDest ? "Dest " : "Src ") + juce::String(cur), true, true);
+        m.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(this).withTargetScreenArea(localAreaToGlobal(rows[(size_t) r].c[(size_t) c].translated(-origin.x, -origin.y).toNearestInt())).withMaximumNumColumns(isDest ? 4 : 1),
+            [this, p, safe = juce::Component::SafePointer<MatrixRows>(this)](int res) { if (safe != nullptr && res > 0) { p->beginChangeGesture(); pset(p, (float) (res - 1)); p->endChangeGesture(); repaint(); } });
+    }
+    std::vector<MatrixRowSpec> rows; std::vector<std::array<juce::RangedAudioParameter*, 5>> ps; juce::Point<float> origin; juce::String last; int row = -1, col = -1; float dragStart = 0, dragY = 0;
+};
 class Knob : public juce::Slider
 {
 public:
@@ -576,11 +680,11 @@ class Content : public juce::Component, private juce::Timer
 public:
     std::function<void()> onZoom, onInfo, onAll, onReset100;
     Content(juce::AudioProcessor& p) : proc(p) { setSize(kW, kH); setOpaque(true); startTimerHz(20); }
-    ~Content() override { stopTimer(); knobs.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); filterDials.clear(); dropdowns.clear(); lfoViews.clear(); routeView.reset(); }
+    ~Content() override { stopTimer(); knobs.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); filterDials.clear(); dropdowns.clear(); lfoViews.clear(); routeView.reset(); matrixView.reset(); }
 
     void showPage(const juce::String& key)
     {
-        knobs.clear(); dials.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); filterDials.clear(); dropdowns.clear(); lfoViews.clear(); routeView.reset(); live.clear(); skip.clear(); shown.clear(); picker.reset(); page = key; data = PageData::load(key); const auto& ids = knobMap().at(key);
+        knobs.clear(); dials.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); filterDials.clear(); dropdowns.clear(); lfoViews.clear(); routeView.reset(); matrixView.reset(); live.clear(); skip.clear(); shown.clear(); picker.reset(); page = key; data = PageData::load(key); const auto& ids = knobMap().at(key);
         for (size_t i = 0; i < data->knobs.size(); ++i)
         {
             juce::RangedAudioParameter* prm = nullptr;
@@ -612,7 +716,8 @@ public:
             else if (r.t.endsWith(" Detune") && nc < 3) { if (auto* p = find(cents[nc++])) live[(int) i] = [p] { return Field::text(p, true) + " Detune"; }; }
         }
         static const juce::StringArray drive { "Diode", "Valve", "Clipper", "XOver", "Rectify", "BitsDown", "RateDown" };   // names as in the maker's Distortion list
-        if (key == "mod") { bindMixerAndEnvelope(2); if (!data->lfoWins.empty()) { auto l = std::make_unique<LfoWindow>(find("nrpn_0_70"), data->lfoWins[0]); addAndMakeVisible(*l); lfoViews.push_back(std::move(l)); } return; }
+        if (key == "mod") { bindMixerAndEnvelope(2); for (auto& mrow : data->matrixRows) for (auto& cc : mrow.c) for (size_t ri = 0; ri < data->runs.size(); ++ri) if (cc.expanded(3, 3).contains(data->runs[ri].r.getCentre())) skip.insert((int) ri);
+        if (!data->matrixRows.empty()) { matrixView = std::make_unique<MatrixRows>(data->matrixRows, [this](const juce::String& id) { return find(id); }); addAndMakeVisible(*matrixView); } if (!data->lfoWins.empty()) { auto l = std::make_unique<LfoWindow>(find("nrpn_0_70"), data->lfoWins[0]); addAndMakeVisible(*l); lfoViews.push_back(std::move(l)); } return; }
         if (key == "filter") { bindMixerAndEnvelope(1); if (!data->routeTiles.empty()) { if (auto* rp = find("cc_60")) { routeView = std::make_unique<RouteTiles>(rp, data->routeTiles); addAndMakeVisible(*routeView); } } dropdown("Diode", "cc_65", drive, "Filter 1 drive type"); dropdown("XOver", "cc_81", drive, "Filter 2 drive type"); return; }
         if (key != "osc") return;
         auto box = [this](int run, const char* id, bool centred) {
@@ -678,7 +783,7 @@ public:
     }
     void timerCallback() override
     {
-        for (auto& f : fields) f->refresh(); for (auto& f : faders) f->refresh(); for (auto& b : bars) b->refresh(); if (envGraph) envGraph->refresh(); for (auto& f : filterDials) f->refresh(); for (auto& d : dropdowns) d->refresh(); for (auto& l : lfoViews) l->refresh(); if (routeView) routeView->refresh();
+        for (auto& f : fields) f->refresh(); for (auto& f : faders) f->refresh(); for (auto& b : bars) b->refresh(); if (envGraph) envGraph->refresh(); for (auto& f : filterDials) f->refresh(); for (auto& d : dropdowns) d->refresh(); for (auto& l : lfoViews) l->refresh(); if (routeView) routeView->refresh(); if (matrixView) matrixView->refresh();
         if (data) { auto sg = iconSignature(); if (sg != iconSig) { iconSig = sg; repaint(0, 0, 340, kH); } }
         for (auto& [i, fn] : live) { auto t = fn(); if (shown[i] != t) { shown[i] = t; repaint(data->runs[(size_t) i].r.expanded(8, 4).toNearestInt()); } }
     }
@@ -739,7 +844,7 @@ public:
     }
 private:
     juce::AudioProcessor& proc; KnobLook look; juce::String page; std::unique_ptr<PageData> data; std::vector<std::unique_ptr<Knob>> knobs; std::vector<std::unique_ptr<WaveDial>> dials; std::unique_ptr<WavePicker> picker;
-    std::vector<std::unique_ptr<Field>> fields; std::vector<std::unique_ptr<Fader>> faders; std::vector<std::unique_ptr<Bar>> bars; std::unique_ptr<EnvGraph> envGraph; std::vector<std::unique_ptr<FilterDial>> filterDials; std::vector<std::unique_ptr<Dropdown>> dropdowns; std::vector<std::unique_ptr<LfoWindow>> lfoViews; std::unique_ptr<RouteTiles> routeView; std::map<int, std::function<juce::String()>> live; std::set<int> skip; std::map<int, juce::String> shown; juce::String iconSig;
+    std::vector<std::unique_ptr<Field>> fields; std::vector<std::unique_ptr<Fader>> faders; std::vector<std::unique_ptr<Bar>> bars; std::unique_ptr<EnvGraph> envGraph; std::vector<std::unique_ptr<FilterDial>> filterDials; std::vector<std::unique_ptr<Dropdown>> dropdowns; std::vector<std::unique_ptr<LfoWindow>> lfoViews; std::unique_ptr<RouteTiles> routeView; std::unique_ptr<MatrixRows> matrixView; std::map<int, std::function<juce::String()>> live; std::set<int> skip; std::map<int, juce::String> shown; juce::String iconSig;
 };
 
 class Editor : public juce::AudioProcessorEditor

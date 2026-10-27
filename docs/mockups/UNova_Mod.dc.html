@@ -114,7 +114,38 @@ function setupEnv(){
     else if(drag.h===3){E.t=c(v.t+dx*127/(50*SC*drag.k));bv[5]=E.t;drawB(5);}else E.r=c(v.r+dx*127/f);drawE();});
   env.addEventListener('pointerup',function(){drag=null;});env.title='Envelope 6: drag the dots (attack, decay and sustain level, sustain time, release)';drawE();
 }
-setTimeout(function(){setupLfo();setupEnv();},900);
+function setupMatrix(){
+  var SRC=["Direct","ModWheel","AftTouch","Express","Velocity","Keyboard","Lfo1+","Lfo2+","Lfo3+","Lfo1+/-","Lfo2+/-","Lfo3+/-","Env1Amp","Env2Filt","Env3","Env4","Env5","Env6"];
+  var DST=["O123Ptch","O1Pitch","O2Pitch","O3Pitch","O1Vsync","O2Vsync","O3Vsync","O1PW/Idx","O2PW/Idx","O3PW/Idx","O1Hard","O2Hard","O3Hard","O1Level","O2Level","O3Level","NoiseLvl","RM1*3Lvl","RM2*3Lvl","F1DAmnt","F2DAmnt","F1Freq","F2Freq","F1Res","F2Res","FBalance","L1Rate","L2Rate","L3Rate","Env1Dec","Env2Dec","FX1Amnt","FX2Amnt","FX3Amnt","FX4Amnt","FX5Amnt","FXFedback","FXWetDry","Ch1Rate","Ch1Depth","Ch1Delay","Ch1Fback","Ch2Rate","Ch2Depth","Ch2Delay","Ch2Fback","Ch3Rate","Ch3Depth","Ch3Delay","Ch3Fback","Ch4Rate","Ch4Depth","Ch4Delay","Ch4Fback","Dly1Time","Dly1Fbak","Dly2Time","Dly2Fbak","EQBasLvl","EQBasFrq","EQMidLvl","EQMidFrq","EQTrbLvl","EQTrbFrq","PanPosn"];
+  var hd=[].slice.call(document.querySelectorAll('span')).filter(function(d){return d.children.length===0&&d.textContent.trim()==='Destination'&&d.parentElement.children.length===6;})[0];
+  var sec=hd&&hd.closest('section');if(!sec)return;
+  var rows=[].slice.call(sec.children).slice(1).filter(function(r){return r.children.length===6&&/^\d+$/.test(r.children[0].textContent.trim());});
+  rows.forEach(function(row){
+    var k=[].slice.call(row.children),v={s1:0,s2:0,t:0,d:0,dp:64};
+    var dimC='#667788',onC='#EEEEFF',bar=k[5],mk=bar.firstElementChild;
+    function nm(a,i){return i<a.length?a[i]:(a===SRC?'Src ':'Dest ')+i;}
+    function draw(){
+      k[1].textContent=nm(SRC,v.s1);k[1].style.color=v.s1?onC:dimC;
+      k[2].textContent='\u00d7 '+nm(SRC,v.s2);k[2].style.color=v.s2?onC:dimC;
+      k[3].textContent=v.t?String(v.t):'None';k[3].style.color=v.t?onC:dimC;
+      k[4].textContent=nm(DST,v.d);
+      mk.style.left=(v.dp/127*100)+'%';
+    }
+    function list(cell,key,arr,title){cell.style.cursor='pointer';cell.title=title+': click to choose (the list order is assumed and only the entries printed in the maker\'s tables are named)';
+      cell.addEventListener('click',function(e){e.stopPropagation();openMenu(cell,arr,v[key],function(i){v[key]=i;draw();});});}
+    list(k[1],'s1',SRC,'Source 1');list(k[2],'s2',SRC,'Source 2');list(k[4],'d',DST,'Destination');
+    k[3].style.cursor='ns-resize';k[3].title='Touch enable (raw value, its meaning is not in the maker\'s document): drag up or down, wheel, double click resets';
+    var ty=0,tv=0;k[3].addEventListener('pointerdown',function(e){e.preventDefault();k[3].setPointerCapture(e.pointerId);ty=e.clientY;tv=v.t;
+      function mv(ev){v.t=Math.max(0,Math.min(127,Math.round(tv+(ty-ev.clientY)*.5)));draw();}function up(){k[3].removeEventListener('pointermove',mv);k[3].removeEventListener('pointerup',up);}k[3].addEventListener('pointermove',mv);k[3].addEventListener('pointerup',up);});
+    k[3].addEventListener('wheel',function(e){e.preventDefault();v.t=Math.max(0,Math.min(127,v.t+(e.deltaY<0?2:-2)));draw();},{passive:false});k[3].addEventListener('dblclick',function(){v.t=0;draw();});
+    bar.style.cursor='ew-resize';bar.style.touchAction='none';bar.title='Depth (-64 to +63): drag, wheel, double click resets to 0';
+    function at(ev){var r=bar.getBoundingClientRect();v.dp=Math.max(0,Math.min(127,Math.round(127*(ev.clientX-r.left)/r.width)));draw();}
+    bar.addEventListener('pointerdown',function(e){e.preventDefault();bar.setPointerCapture(e.pointerId);at(e);function mv(ev){at(ev);}function up(){bar.removeEventListener('pointermove',mv);bar.removeEventListener('pointerup',up);}bar.addEventListener('pointermove',mv);bar.addEventListener('pointerup',up);});
+    bar.addEventListener('wheel',function(e){e.preventDefault();v.dp=Math.max(0,Math.min(127,v.dp+(e.deltaY<0?2:-2)));draw();},{passive:false});bar.addEventListener('dblclick',function(){v.dp=64;draw();});
+    draw();
+  });
+}
+setTimeout(function(){setupLfo();setupEnv();setupMatrix();},900);
 })();
 </script>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":669}}'>

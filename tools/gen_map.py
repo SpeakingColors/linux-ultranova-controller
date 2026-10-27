@@ -62,7 +62,9 @@ GL = [(0, "Protect"), (2, "Power-up Bank"), (3, "Power-up Patch"), (4, "Global M
       (44, "Phones Balance (levbal mode)")]
 for lsb, n in GL: add(64, lsb, "Global", n)
 
-DEFAULTS = {(0, 3): 127}   # start values that are not 0: Filter envelope sustain level full
+DEFAULTS = {(0, 3): 127}
+for _k in range(9): DEFAULTS[(1, 86 + 5 * _k)] = 64   # mod matrix depth, centre = 0 (slots 1 to 9)
+for _k in range(11): DEFAULTS[(2, 3 + 5 * _k)] = 64   # mod matrix depth, slots 10 to 20   # start values that are not 0: Filter envelope sustain level full
 lines = open(path).read().splitlines()
 keep = [l for l in lines if l.startswith("id,") or l.startswith("cc_") or l.startswith("cc14_")]
 out = list(keep)

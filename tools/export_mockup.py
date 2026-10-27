@@ -89,7 +89,11 @@ TEXTJS = r"""(key) => {
   const lfoWins = []; if (key === 'mod') root.querySelectorAll('svg[aria-label^="LFO"][role="img"]').forEach(sv => { const r = sv.getBoundingClientRect(); lfoWins.push({ x: +(r.left - rb.left).toFixed(1), y: +(r.top - rb.top).toFixed(1), w: +r.width.toFixed(1), h: +r.height.toFixed(1) }); sv.style.visibility = 'hidden'; });
   // Filter page: the six routing tiles are drawn by the plugin from the Filter Configuration control
   const routeTiles = []; if (key === 'filter') { const hd = [...root.querySelectorAll('div')].find(d => d.children.length === 0 && d.textContent.trim() === 'Routing'); const grid = hd && hd.nextElementSibling; if (grid) [...grid.children].forEach(t => { const r = t.getBoundingClientRect(); routeTiles.push({ x: +(r.left - rb.left).toFixed(1), y: +(r.top - rb.top).toFixed(1), w: +r.width.toFixed(1), h: +r.height.toFixed(1) }); t.style.visibility = 'hidden'; }); }
-  return { runs, dials, navIcons, navBars, faders, bars, env, filterDials, lfoWins, routeTiles };
+  // Modulation page: the eight matrix rows (source 1, source 2, touch, destination, depth) are drawn by the plugin
+  const matrixRows = []; if (key === 'mod') { const hd = [...root.querySelectorAll('span')].find(d => d.children.length === 0 && d.textContent.trim() === 'Destination' && d.parentElement.children.length === 6); const sec = hd && hd.closest('section'); if (sec) [...sec.children].slice(1).forEach(row => { const k = [...row.children]; if (k.length !== 6 || !/^\d+$/.test(k[0].textContent.trim())) return; const rr = c => { const r = c.getBoundingClientRect(); return { x: +(r.left - rb.left).toFixed(1), y: +(r.top - rb.top).toFixed(1), w: +r.width.toFixed(1), h: +r.height.toFixed(1) }; };
+    const rowBg = getComputedStyle(row).backgroundColor, sel = (getComputedStyle(row).outlineStyle !== 'none');
+    matrixRows.push({ slot: parseInt(k[0].textContent), sel, bg: rowBg, c: [rr(k[1]), rr(k[2]), rr(k[3]), rr(k[4]), rr(k[5])] }); for (let i = 1; i < 6; i++) k[i].style.visibility = 'hidden'; }); }
+  return { runs, dials, navIcons, navBars, faders, bars, env, filterDials, lfoWins, routeTiles, matrixRows };
 }"""
 HIDE_TEXT = "*{color:transparent !important;text-shadow:none !important;-webkit-text-fill-color:transparent !important} svg text{display:none !important}"
 
@@ -99,7 +103,7 @@ with sync_playwright() as p:
         pg.goto("file://%s/docs/mockups/%s.dc.html" % (root, name)); pg.add_style_tag(content=FONTS)
         pg.wait_for_timeout(1500); pg.evaluate("document.fonts.ready"); pg.wait_for_timeout(500)
         info = pg.evaluate(JS, [760, 1348])
-        tx = pg.evaluate(TEXTJS, key); info["runs"] = tx["runs"]; info["dials"] = tx["dials"]; info["navIcons"] = tx["navIcons"]; info["navBars"] = tx["navBars"]; info["faders"] = tx["faders"]; info["bars"] = tx["bars"]; info["env"] = tx["env"]; info["filterDials"] = tx["filterDials"]; info["lfoWins"] = tx["lfoWins"]; info["routeTiles"] = tx["routeTiles"]
+        tx = pg.evaluate(TEXTJS, key); info["runs"] = tx["runs"]; info["dials"] = tx["dials"]; info["navIcons"] = tx["navIcons"]; info["navBars"] = tx["navBars"]; info["faders"] = tx["faders"]; info["bars"] = tx["bars"]; info["env"] = tx["env"]; info["filterDials"] = tx["filterDials"]; info["lfoWins"] = tx["lfoWins"]; info["routeTiles"] = tx["routeTiles"]; info["matrixRows"] = tx["matrixRows"]
         pg.add_style_tag(content=HIDE_TEXT); pg.wait_for_timeout(200)
         el = pg.query_selector("x-dc > :last-child")
         el.screenshot(path=os.path.join(root, "assets/ui/%s.png" % key))
