@@ -851,6 +851,12 @@ public:
         box(78, "cc_26", true); box(79, "cc_28", true); box(104, "cc_37", true); box(105, "cc_40", true); box(130, "cc_48", true); box(131, "cc_50", true);
         box(171, "cc_14", false);
         bindMixerAndEnvelope(0);
+        auto dropAt = [this](int run, const char* id, juce::StringArray opts, const juce::String& name) {   // drop-down on the run with this index (the text of the box is not unique on this page)
+            auto* q = find(id); if (!q || (size_t) run >= data->runs.size()) return; const auto& r = data->runs[(size_t) run]; skip.insert(run);
+            auto d = std::make_unique<Dropdown>(q, std::move(opts), r, juce::Rectangle<float>(juce::jmax(56.0f, r.r.getWidth() + 18.0f), 18).withCentre(r.r.getCentre()), name); addAndMakeVisible(*d); dropdowns.push_back(std::move(d)); };
+        dropAt(148, "cc_17", { "Free", "0", "45", "90", "135", "180", "225", "270", "315" }, "Oscillator start phase");
+        dropAt(150, "cc_18", { "Off", "On" }, "Fixed note");
+        dropAt(158, "cc_57", { "White", "Pink", "Red", "Blue" }, "Noise type");
         dropdown("Exponential", "cc_12", { "Linear", "Exponential" }, "Portamento mode"); dropdown("Mono Auto-Glide", "cc_3", { "Mono", "Mono Auto-Glide", "Polyphonic" }, "Polyphony mode");
     }
     void dropdown(const juce::String& boxText, const char* id, juce::StringArray opts, const juce::String& name)

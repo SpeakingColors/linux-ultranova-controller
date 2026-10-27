@@ -313,7 +313,14 @@ function dropdownBox(text,opts,startIdx){
   if(!el)return;var cur=startIdx;el.style.cursor='pointer';el.title='Click to choose (list order assumed)';
   el.addEventListener('click',function(e){e.stopPropagation();openMenu(el,opts,cur,function(i){cur=i;el.textContent=opts[i];});});
 }
-setTimeout(function(){dropdownBox('Exponential',['Linear','Exponential'],1);dropdownBox('Mono Auto-Glide',['Mono','Mono Auto-Glide','Polyphonic'],1);},900);
+function fixedNoteBox(){
+  var lab=[].slice.call(document.querySelectorAll('span,div')).filter(function(x){return x.children.length===0&&x.textContent.trim()==='Fixed Note';})[0];
+  var el=lab&&lab.previousElementSibling; if(!el||el.textContent.trim()!=='Off')return; var cur=0;
+  el.style.cursor='pointer';el.title='Fixed note: click to choose (assumed)';
+  el.addEventListener('click',function(e){e.stopPropagation();openMenu(el,['Off','On'],cur,function(i){cur=i;el.textContent=['Off','On'][i];});});
+}
+setTimeout(function(){dropdownBox('Exponential',['Linear','Exponential'],1);dropdownBox('Mono Auto-Glide',['Mono','Mono Auto-Glide','Polyphonic'],1);
+  dropdownBox('Free',['Free','0','45','90','135','180','225','270','315'],0);dropdownBox('White',['White','Pink','Red','Blue'],0);fixedNoteBox();},900);
 setTimeout(setupMix,900);
 })();
 </script>
