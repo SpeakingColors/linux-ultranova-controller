@@ -1,0 +1,51 @@
+[
+ {
+  "title": "UltraNova · Animate",
+  "img": "gallery_1.png",
+  "file": "UltraNova.dc.html",
+  "w": 1348,
+  "h": 660
+ },
+ {
+  "title": "UltraNova · Oscillators",
+  "img": "gallery_2.png",
+  "file": "UNova_Osc.dc.html",
+  "w": 1348,
+  "h": 728
+ },
+ {
+  "title": "UltraNova · Filters",
+  "img": "gallery_3.png",
+  "file": "UNova_Filter.dc.html",
+  "w": 1348,
+  "h": 760
+ },
+ {
+  "title": "UltraNova · Modulation",
+  "img": "gallery_4.png",
+  "file": "UNova_Mod.dc.html",
+  "w": 1348,
+  "h": 669
+ },
+ {
+  "title": "UltraNova · Effects",
+  "img": "gallery_5.png",
+  "file": "UNova_FX.dc.html",
+  "w": 1495,
+  "h": 669
+ },
+ {
+  "title": "UltraNova · Audio / Global",
+  "img": "gallery_6.png",
+  "file": "UNova_Global.dc.html",
+  "w": 1348,
+  "h": 660
+ },
+ {
+  "title": "UltraNova · Librarian",
+  "img": "gallery_7.png",
+  "file": "UNova_Lib.dc.html",
+  "w": 1348,
+  "h": 660
+ }
+]
