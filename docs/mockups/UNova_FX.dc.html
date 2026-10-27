@@ -148,6 +148,22 @@ function openMenu(el,opts,cur,cb){
   document.body.appendChild(m);_menu=m;
   setTimeout(function(){document.addEventListener('click',function(){if(_menu){_menu.remove();_menu=null;}},{once:true});},0);
 }
+function setupAnim(){
+  function leaf(t,re){return [].slice.call(document.querySelectorAll('span,div')).filter(function(e){return e.children.length===0&&(re?re.test(e.textContent.trim()):e.textContent.trim()===t);});}
+  [['Arpeggiator',/^Arpeggiator/],['Chord',/^Chord /],['Vocoder',/^Vocoder/]].forEach(function(h){
+    var e=leaf('',h[1])[0]; if(!e)return; var on=h[0]!=='Vocoder';
+    function d(){e.textContent=h[0]+(on?' \u25c9 On':' \u25ef On');}
+    e.style.cursor='pointer';e.title=h[0]+': click to switch on or off';e.addEventListener('click',function(){on=!on;d();});d();
+  });
+  function pick(t,list,tip){var e=leaf(t)[0]; if(!e)return; var i=Math.max(0,list.indexOf(t));
+    e.style.cursor='pointer';e.title=tip+': click to choose (the list is assumed, not checked on a real UltraNova)';
+    e.addEventListener('click',function(ev){ev.stopPropagation();openMenu(e,list,i,function(k){i=k;e.textContent=list[k];});});}
+  pick('Up',['Up','Down','Alt 1','Alt 2','Random','Played','Chord'],'Arpeggiator mode');
+  pick('High Pass',['High Pass','Noise'],'Vocoder sibilance type');
+  pick('16th',['1/32','1/16','1/8','1/4','1/2','1/1'],'Arpeggiator rate');
+  var lt=leaf('Latch')[0]; if(lt&&lt.parentElement){var pill=lt.parentElement.firstElementChild; if(pill&&pill!==lt){var lon=false;pill.style.cursor='pointer';pill.title='Latch: click to switch';pill.addEventListener('click',function(){lon=!lon;pill.style.background=lon?'#7EE3E8':'';pill.style.boxShadow=lon?'0 0 6px #7EE3E8':'';});}}
+  var oc=leaf('1')[0]; [].slice.call(document.querySelectorAll('span,div')).filter(function(e){return e.children.length===0&&e.textContent.trim()==='1'&&e.previousElementSibling==null;}).forEach(function(e){});
+}
 function setupFx(){
   var list=document.querySelector('div[style*="width: 210px"][style*="grid-template-columns"]'); if(!list)return;
   var items=[].slice.call(list.children);
@@ -168,7 +184,7 @@ function setupFx(){
   routes.forEach(function(r,i){r.style.cursor='pointer';r.title='Routing '+(i+1)+': click to choose (the order is assumed)';r.addEventListener('click',function(){route=i;draw();});});
   draw();
 }
-setTimeout(setupFx,900);
+setTimeout(function(){setupFx();setupAnim();},900);
 })();
 </script>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":669}}'>

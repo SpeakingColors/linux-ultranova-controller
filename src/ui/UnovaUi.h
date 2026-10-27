@@ -560,6 +560,26 @@ public:
 private:
     std::array<juce::RangedAudioParameter*, 5> slots; juce::RangedAudioParameter* route; juce::Rectangle<float> list; std::array<juce::Rectangle<float>, 5> tl; std::array<juce::Rectangle<float>, 8> rt; int* sel; juce::Point<float> origin; int last = -1;
 };
+// One bit of a packed controller value (for example Arpeggiator On / Latch, Vocoder On / sibilance type). Click toggles it. The bit positions come from the maker's document.
+class BitSwitch : public juce::Component, public juce::SettableTooltipClient
+{
+public:
+    BitSwitch(juce::RangedAudioParameter* p, int bitNo, juce::Rectangle<float> box, const juce::String& name, juce::StringArray texts = {}, juce::Font f = {}, juce::Colour c = juce::Colours::white, bool lamp = false)
+        : param(p), bit(bitNo), txt(std::move(texts)), font(f), col(c), isLamp(lamp), title(name)
+    { setBounds(box.toNearestInt()); setMouseCursor(juce::MouseCursor::PointingHandCursor); setTooltip(name + ": click to switch (one bit of a packed value, the maker's document gives the bit but not the labels)"); }
+    bool on() const { return (juce::roundToInt(pget(param)) >> bit) & 1; }
+    void refresh() { if ((int) on() != last) repaint(); }
+    void paint(juce::Graphics& g) override
+    {
+        last = (int) on();
+        if (isLamp) { if (last) { g.setColour(juce::Colour(0xff7EE3E8)); g.fillRoundedRectangle(getLocalBounds().toFloat().reduced(1), 5); g.setColour(juce::Colour(0xff0B0C10)); g.setFont(makeFont(500, false, 8.0f)); g.drawText("ON", getLocalBounds(), juce::Justification::centred); } return; }
+        if (txt.size() >= 2) { g.setColour(col); g.setFont(font); g.drawText(txt[last], getLocalBounds().toFloat(), juce::Justification::centred, false); }
+    }
+    void mouseDown(const juce::MouseEvent&) override
+    { if (!param) return; int v = juce::roundToInt(pget(param)); v ^= (1 << bit); param->beginChangeGesture(); pset(param, (float) v); param->endChangeGesture(); repaint(); }
+private:
+    juce::RangedAudioParameter* param; int bit; juce::StringArray txt; juce::Font font; juce::Colour col; bool isLamp; juce::String title; int last = -1;
+};
 inline const juce::StringArray& lfoNames()
 {
     static const juce::StringArray n { "Sine", "Triangle", "Sawtooth", "Square", "Rand S/H", "Time S/H", "PianoEnv", "Seq 1", "Seq 2", "Seq 3", "Seq 4", "Seq 5", "Seq 6", "Seq 7",
@@ -742,11 +762,11 @@ class Content : public juce::Component, private juce::Timer
 public:
     std::function<void()> onZoom, onInfo, onAll, onReset100;
     Content(juce::AudioProcessor& p) : proc(p) { setSize(kW, kH); setOpaque(true); startTimerHz(20); }
-    ~Content() override { stopTimer(); knobs.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); filterDials.clear(); dropdowns.clear(); lfoViews.clear(); routeView.reset(); matrixView.reset(); fxView.reset(); }
+    ~Content() override { stopTimer(); knobs.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); filterDials.clear(); dropdowns.clear(); lfoViews.clear(); routeView.reset(); matrixView.reset(); fxView.reset(); bitSwitches.clear(); }
 
     void showPage(const juce::String& key)
     {
-        knobs.clear(); dials.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); filterDials.clear(); dropdowns.clear(); lfoViews.clear(); routeView.reset(); matrixView.reset(); fxView.reset(); live.clear(); skip.clear(); shown.clear(); picker.reset(); page = key; data = PageData::load(key); const auto& ids = knobMap().at(key);
+        knobs.clear(); dials.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); filterDials.clear(); dropdowns.clear(); lfoViews.clear(); routeView.reset(); matrixView.reset(); fxView.reset(); bitSwitches.clear(); live.clear(); skip.clear(); shown.clear(); picker.reset(); page = key; data = PageData::load(key); const auto& ids = knobMap().at(key);
         for (size_t i = 0; i < data->knobs.size(); ++i)
         {
             juce::RangedAudioParameter* prm = nullptr;
@@ -804,6 +824,22 @@ public:
                     const juce::Rectangle<float> b(tiles[(size_t) i].getX() + 5, 253, 98, 20); TextRun run; run.font = makeFont(400, false, 10.0f); run.col = juce::Colour(0xffDCE3F0);
                     auto d = std::make_unique<Dropdown>(q, fxNames(), run, b, "Slot " + juce::String(i + 1) + " effect"); addAndMakeVisible(*d); dropdowns.push_back(std::move(d));
                 }
+            }
+            // Arpeggiator, vocoder and pan controls below the routing
+            {
+                auto bits = [this](const char* id, int bit, juce::Rectangle<float> box, const juce::String& name, juce::StringArray t = {}, int run = -1, bool lamp = false) {
+                    auto* q = find(id); if (!q) return; juce::Font f = makeFont(400, false, 9.0f); juce::Colour c(0xffDCE3F0); if (run >= 0) { f = data->runs[(size_t) run].font; c = data->runs[(size_t) run].col; skip.insert(run); }
+                    auto b = std::make_unique<BitSwitch>(q, bit, box, name, t, f, c, lamp); addAndMakeVisible(*b); bitSwitches.push_back(std::move(b)); };
+                const auto tw = [this](int run, float extra) { auto r = data->runs[(size_t) run].r; return r.expanded(extra, 1.0f); };
+                auto onText = [this](int run, const char* word, const char* id) { auto* q = find(id); if (q && (size_t) run < data->runs.size()) live[run] = [q, word] { return juce::String(word) + (((juce::roundToInt(pget(q))) & 1) ? juce::String::fromUTF8(" \xe2\x97\x89 On") : juce::String::fromUTF8(" \xe2\x97\xaf On")); }; };
+                onText(143, "Arpeggiator", "nrpn_1_61"); onText(158, "Vocoder", "nrpn_1_55");
+                bits("nrpn_1_61", 0, tw(143, 4), "Arpeggiator on"); bits("nrpn_1_55", 0, tw(158, 4), "Vocoder on");
+                bits("nrpn_1_61", 2, { 411, 436, 26, 13 }, "Arpeggiator latch", {}, -1, true);
+                bits("nrpn_1_55", 1, tw(163, 12), "Vocoder sibilance type", { "High Pass", "Noise" }, 163);
+                auto box = [this](int run, const char* id, bool centred, float w) { auto* q = find(id); if (!q) return; const auto& r = data->runs[(size_t) run]; skip.insert(run);
+                    auto f = std::make_unique<Field>(q, centred, r, juce::Rectangle<float>(w, 16).withCentre(r.r.getCentre())); addAndMakeVisible(*f); fields.push_back(std::move(f)); };
+                box(146, "nrpn_1_62", false, 34); box(172, "cc_89", false, 30);
+                dropdown("Up", "nrpn_1_65", { "Up", "Down", "Alt 1", "Alt 2", "Random", "Played", "Chord" }, "Arpeggiator mode");
             }
             return;
         }
@@ -872,7 +908,7 @@ public:
     }
     void timerCallback() override
     {
-        for (auto& f : fields) f->refresh(); for (auto& f : faders) f->refresh(); for (auto& b : bars) b->refresh(); if (envGraph) envGraph->refresh(); for (auto& f : filterDials) f->refresh(); for (auto& d : dropdowns) d->refresh(); for (auto& l : lfoViews) l->refresh(); if (routeView) routeView->refresh(); if (matrixView) matrixView->refresh(); if (fxView) fxView->refresh();
+        for (auto& f : fields) f->refresh(); for (auto& f : faders) f->refresh(); for (auto& b : bars) b->refresh(); if (envGraph) envGraph->refresh(); for (auto& f : filterDials) f->refresh(); for (auto& d : dropdowns) d->refresh(); for (auto& l : lfoViews) l->refresh(); if (routeView) routeView->refresh(); if (matrixView) matrixView->refresh(); if (fxView) fxView->refresh(); for (auto& b : bitSwitches) b->refresh();
         if (data) { auto sg = iconSignature(); if (sg != iconSig) { iconSig = sg; repaint(0, 0, 340, kH); } }
         for (auto& [i, fn] : live) { auto t = fn(); if (shown[i] != t) { shown[i] = t; repaint(data->runs[(size_t) i].r.expanded(8, 4).toNearestInt()); } }
     }
@@ -933,7 +969,7 @@ public:
     }
 private:
     juce::AudioProcessor& proc; KnobLook look; juce::String page; std::unique_ptr<PageData> data; std::vector<std::unique_ptr<Knob>> knobs; std::vector<std::unique_ptr<WaveDial>> dials; std::unique_ptr<WavePicker> picker;
-    std::vector<std::unique_ptr<Field>> fields; std::vector<std::unique_ptr<Fader>> faders; std::vector<std::unique_ptr<Bar>> bars; std::unique_ptr<EnvGraph> envGraph; std::vector<std::unique_ptr<FilterDial>> filterDials; std::vector<std::unique_ptr<Dropdown>> dropdowns; std::vector<std::unique_ptr<LfoWindow>> lfoViews; std::unique_ptr<RouteTiles> routeView; std::unique_ptr<MatrixRows> matrixView; std::unique_ptr<FxEditor> fxView; int fxSel = 0; std::map<int, std::function<juce::String()>> live; std::set<int> skip; std::map<int, juce::String> shown; juce::String iconSig;
+    std::vector<std::unique_ptr<Field>> fields; std::vector<std::unique_ptr<Fader>> faders; std::vector<std::unique_ptr<Bar>> bars; std::unique_ptr<EnvGraph> envGraph; std::vector<std::unique_ptr<FilterDial>> filterDials; std::vector<std::unique_ptr<Dropdown>> dropdowns; std::vector<std::unique_ptr<LfoWindow>> lfoViews; std::unique_ptr<RouteTiles> routeView; std::unique_ptr<MatrixRows> matrixView; std::unique_ptr<FxEditor> fxView; int fxSel = 0; std::vector<std::unique_ptr<BitSwitch>> bitSwitches; std::map<int, std::function<juce::String()>> live; std::set<int> skip; std::map<int, juce::String> shown; juce::String iconSig;
 };
 
 class Editor : public juce::AudioProcessorEditor
