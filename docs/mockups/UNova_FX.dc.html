@@ -134,6 +134,43 @@ a{color:#E6E8EC}a:hover{color:#FFFFFF}
 <div style="position: absolute; left: 7px; top: 7px; width: 26px; height: 26px; transform: rotate(-70deg)"><div style="position: absolute; left: 50%; top: 3.6px; width: 2px; height: 6.8px; margin-left: -1px; border-radius: 1px; background: #1C1E22; box-shadow: 0 0 1px rgba(255,255,255,0.6)"></div></div></div><span style="font-size: 10px; color: #A9AFBA; text-align: center; line-height: 1.1">Depth</span></div><div style="display: flex; flex-direction: column; font-size: 9px; color: #A9AFBA; gap: 2px">Sync Rate <span style="display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 18px; border-radius: 2px; background: #0E0F12; border: 1px solid #3B3E45; color: #DCE3F0; font-size: 10px">Off</span></div></div></section></div><div style="position: absolute; bottom: 0; left: 0; right: 0; height: 28px; background: #2B3040; border-top: 2px solid #8A9BC4; box-shadow: 0 -6px 10px rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; letter-spacing: .06em; color: #F2F4F8">UltraNova Controller</div></main>
 </div><div aria-hidden="true" class="wood-cheek" style="width: 34px; flex: none; align-self: stretch; background: linear-gradient(90deg,rgb(29,18,10) 0px 1px,rgb(27,17,9) 1px 2px,rgb(36,22,12) 2px 3px,rgb(40,25,14) 3px 4px,rgb(44,28,15) 4px 5px,rgb(43,27,16) 5px 6px,rgb(57,36,20) 6px 7px,rgb(63,39,22) 7px 8px,rgb(68,43,24) 8px 9px,rgb(66,42,24) 9px 10px,rgb(70,44,25) 10px 11px,rgb(81,52,30) 11px 12px,rgb(70,45,26) 12px 13px,rgb(86,56,32) 13px 14px,rgb(90,58,33) 14px 15px,rgb(93,61,34) 15px 16px,rgb(83,53,32) 16px 17px,rgb(102,65,39) 17px 18px,rgb(103,68,40) 18px 19px,rgb(107,70,41) 19px 20px,rgb(99,65,38) 20px 21px,rgb(106,70,41) 21px 22px,rgb(103,68,40) 22px 23px,rgb(82,54,31) 23px 24px,rgb(93,61,35) 24px 25px,rgb(89,58,33) 25px 26px,rgb(86,55,32) 26px 27px,rgb(69,46,26) 27px 28px,rgb(79,51,29) 28px 29px,rgb(75,47,28) 29px 30px,rgb(70,45,25) 30px 31px,rgb(60,38,21) 31px 32px,rgb(61,38,22) 32px 33px,rgb(55,36,20) 33px 34px,rgb(42,27,15) 34px 35px); box-shadow: none; border-radius: 0 6px 6px 0"></div></div>
 </x-dc>
+<script>
+(function(){
+var FX=["BYPASS","EQ","Compressor 1","Compressor 2","Distortion 1","Distortion 2","Delay 1","Delay 2","Reverb 1","Reverb 2","Chorus 1","Chorus 2","Chorus 3","Chorus 4","Gator"];
+var _menu=null;
+function openMenu(el,opts,cur,cb){
+  if(_menu){_menu.remove();_menu=null;}
+  var m=document.createElement('div'),r=el.getBoundingClientRect();
+  m.style.cssText='position:fixed;z-index:9999;left:'+r.left+'px;top:'+Math.min(r.bottom,innerHeight-Math.min(opts.length*26+8,innerHeight*.7)-4)+'px;background:#2B3038;border:1px solid #4B525F;border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.55);padding:4px 0;min-width:'+Math.max(r.width,110)+'px;max-height:70vh;overflow:auto;font:13px "Exo 2",system-ui,sans-serif;color:#E6E8EC';
+  opts.forEach(function(o,i){var b=document.createElement('div');b.textContent=(i===cur?'\u2713 ':'  ')+o;b.style.cssText='padding:5px 12px;cursor:pointer;white-space:nowrap';
+    b.onmouseenter=function(){b.style.background='#3C4452';};b.onmouseleave=function(){b.style.background='';};
+    b.onclick=function(e){e.stopPropagation();m.remove();_menu=null;cb(i);};m.appendChild(b);});
+  document.body.appendChild(m);_menu=m;
+  setTimeout(function(){document.addEventListener('click',function(){if(_menu){_menu.remove();_menu=null;}},{once:true});},0);
+}
+function setupFx(){
+  var list=document.querySelector('div[style*="width: 210px"][style*="grid-template-columns"]'); if(!list)return;
+  var items=[].slice.call(list.children);
+  var tiles=[].slice.call(document.querySelectorAll('div[style*="width: 108px"][style*="border-radius: 6px"]')).slice(0,5);
+  var title=[].slice.call(document.querySelectorAll('div')).filter(function(d){return d.children.length===0&&/^Effect Edit/.test(d.textContent);})[0];
+  var rg=[].slice.call(document.querySelectorAll('div[style*="repeat(4, 1fr)"]')).filter(function(g){return g.children.length===8;})[0];
+  var routes=rg?[].slice.call(rg.children):[];
+  var eff=[1,10,6,8,0],sel=0,route=0;
+  function draw(){
+    items.forEach(function(it,i){var on=i===eff[sel];it.style.color=on?'#FFF':'#8F949E';it.style.background=on?'#2C3448':'transparent';});
+    tiles.forEach(function(t,i){t.style.borderColor=i===sel?'#7EE3E8':'#45474D';var b=t.lastElementChild;b.textContent=FX[eff[i]];});
+    if(title)title.textContent='Effect Edit \u00b7 Slot '+(sel+1);
+    routes.forEach(function(r,i){r.style.borderColor=i===route?'#7EE3E8':'#6F80AC';});
+  }
+  items.forEach(function(it,i){it.style.cursor='pointer';it.title='Click to put this effect in the selected slot (list order assumed, not checked on a real UltraNova)';it.addEventListener('click',function(){eff[sel]=i;draw();});});
+  tiles.forEach(function(t,i){t.style.cursor='pointer';t.addEventListener('click',function(){sel=i;draw();});
+    var b=t.lastElementChild;b.title='Slot '+(i+1)+' effect: click to choose';b.addEventListener('click',function(e){e.stopPropagation();sel=i;draw();openMenu(b,FX,eff[i],function(k){eff[i]=k;draw();});});});
+  routes.forEach(function(r,i){r.style.cursor='pointer';r.title='Routing '+(i+1)+': click to choose (the order is assumed)';r.addEventListener('click',function(){route=i;draw();});});
+  draw();
+}
+setTimeout(setupFx,900);
+})();
+</script>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":669}}'>
 class Component extends DCLogic {
 renderVals() {
