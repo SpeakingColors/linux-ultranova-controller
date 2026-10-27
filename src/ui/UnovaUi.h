@@ -982,6 +982,7 @@ class Editor : public juce::AudioProcessorEditor
 {
 public:
     std::function<void()> openAllParameters;
+    std::function<void(int)> onWidth;   // told the window width whenever the user resizes (the plugin keeps it in its saved state)
     explicit Editor(juce::AudioProcessor& p) : AudioProcessorEditor(p), content(p)
     {
         tooltip = std::make_unique<juce::TooltipWindow>(this, 700);
@@ -1001,7 +1002,9 @@ public:
     {
         content.setTransform(juce::AffineTransform::scale((float) getWidth() / (float) kW)); content.setBounds(0, 0, kW, kH);
         if (border) { border->setBounds(getLocalBounds()); border->toFront(false); }
+        if (onWidth && getWidth() > 0) onWidth(getWidth());
     }
+    void restoreWidth(int w) { if (w < 674) return; w = juce::jmin(w, 2696); setSize(w, (int) std::lround(w * (double) kH / kW)); }
 private:
     void cycleZoom()
     {

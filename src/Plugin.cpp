@@ -93,7 +93,7 @@ public:
 
     void getStateInformation(juce::MemoryBlock& dest) override
     {
-        juce::XmlElement x("STATE"); x.setAttribute("v", 1); x.setAttribute("midi_channel", channelParam->get());
+        juce::XmlElement x("STATE"); x.setAttribute("v", 1); x.setAttribute("midi_channel", channelParam->get()); if (editorWidth > 0) x.setAttribute("editor_w", editorWidth);
         for (auto& s : slots) x.setAttribute(s.param->paramID, s.param->get());
         copyXmlToBinary(x, dest);
     }
@@ -102,11 +102,12 @@ public:
         if (auto x = getXmlFromBinary(data, size))
         {
             if (!x->hasTagName("STATE")) return;
-            const int ch = x->getIntAttribute("midi_channel", 1); *channelParam = juce::jlimit(1, 16, ch);
+            editorWidth = x->getIntAttribute("editor_w", 0); const int ch = x->getIntAttribute("midi_channel", 1); *channelParam = juce::jlimit(1, 16, ch);
             for (auto& s : slots) if (x->hasAttribute(s.param->paramID)) setFromState(s, x->getIntAttribute(s.param->paramID));
         }
     }
 
+    int editorWidth = 0;   // window width the user last chose, kept in the saved state so the window opens the same size next time
 private:
     void setFromState(Slot& s, int v)
     {
@@ -218,6 +219,7 @@ juce::AudioProcessorEditor* CtlProcessor::createEditor()
 {
     // The real window is built from the mockup. The list of every parameter (CtlEditor) opens from the gear button.
     auto* ed = new unova::Editor(*this);
+    ed->restoreWidth(editorWidth); ed->onWidth = [this](int w) { editorWidth = w; };
     ed->openAllParameters = [this]
     {
         juce::DialogWindow::LaunchOptions o; o.content.setOwned(new CtlEditor(*this)); o.dialogTitle = "All parameters"; o.componentToCentreAround = nullptr;
