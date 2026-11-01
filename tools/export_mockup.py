@@ -36,6 +36,11 @@ JS = r"""([H, W]) => {
     rec.near = texts.slice(0, 4);
     out.knobs.push(rec); wrap.style.visibility = 'hidden';
   });
+  // Librarian page: toolbar, search box, folder tree and patch rows are live in the plugin; the art keeps only the frames and the column header
+  out.lib = {}; document.querySelectorAll('[data-lib]').forEach(e => { const id = e.getAttribute('data-lib'); out.lib[id] = rel(e);
+    if (id === 'tree') { if (e.children[0]) out.lib.treeRow = rel(e.children[0]); [...e.children].forEach(c => { c.style.visibility = 'hidden'; }); }
+    else if (id === 'table') { if (e.children[1]) out.lib.row = rel(e.children[1]); if (e.children[0]) out.lib.head = rel(e.children[0]); [...e.children].slice(1).forEach(c => { c.style.visibility = 'hidden'; }); }
+    else e.style.visibility = 'hidden'; });
   return out;
 }"""
 
@@ -103,6 +108,7 @@ HIDE_TEXT = "*{color:transparent !important;text-shadow:none !important;-webkit-
 with sync_playwright() as p:
     b = p.chromium.launch(); pg = b.new_page(viewport={"width": 1500, "height": 900}, device_scale_factor=2)
     for key, name in PAGES.items():
+        if len(sys.argv) > 1 and key not in sys.argv[1:]: continue   # python3 tools/export_mockup.py lib  exports one page
         pg.goto("file://%s/docs/mockups/%s.dc.html" % (root, name)); pg.add_style_tag(content=FONTS)
         pg.wait_for_timeout(1500); pg.evaluate("document.fonts.ready"); pg.wait_for_timeout(500)
         info = pg.evaluate(JS, [760, 1348])

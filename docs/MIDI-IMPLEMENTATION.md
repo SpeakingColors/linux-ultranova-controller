@@ -177,7 +177,7 @@ Mod matrix slot layout: five consecutive NRPNs per slot: Source1, Source2, Touch
 
 1. Value ranges and enum lists (filter types, waveforms, effect types, mod sources/destinations): not in this document; likely in Novation's Patch & Global spec or the manual. Needed before the UI can label values.
 2. The CC 57 duplicate.
-3. Patch SysEx dump/request format (not in this document).
+3. Patch SysEx request format (not in this document). The dump layout below was read from a real bank file, not from this document.
 4. Behaviour of NRPN reads: whether the unit answers requests, or only transmits on panel edits, is not stated.
 
 ## How the plugin backend uses these rules
@@ -187,3 +187,12 @@ Mod matrix slot layout: five consecutive NRPNs per slot: Source1, Source2, Touch
 - Packed bytes (LFO, Gator, Vocoder, Arpeggiator) are exposed as whole bytes. Only the bit positions printed above are known; the other bits are not, so a UI must change its own field and keep the rest (helpers `getBits` / `setBits` in src/MidiCore.h).
 - Not exposed: 0:122 to 0:127 (packed specials), 1:68, 1:79 and 2:55 to 2:62 (spare), global spares.
 - Device inquiry: `identityRequest()` and `parseIdentityReply()` follow the standard Universal Device Inquiry. The model number of the UltraNova is not in our sources, so the reply is shown, not matched.
+
+## Patch dump file layout (read from a real 128 patch bank file)
+
+Not from Novation's document: this was checked on a real bank file (67,328 bytes, 128 patches). The Librarian page uses only what is listed here.
+
+- One patch is one SysEx message of 526 bytes: `F0 00 20 29 03 01 7F 01 00 09 04 00`, then the patch number (0 to 127), then `00 2A`, then a 16 character ASCII name padded with spaces, then 494 bytes of patch data, then `F7`.
+- Byte offsets: 0 to 11 header, 12 patch number, 13 and 14 `00 2A`, 15 to 30 name, 31 to 524 data, 525 `F7`.
+- The patch data bytes are not decoded anywhere in this project. The library never reads or changes them; it only edits the name and renumbers byte 12 when a bank is exported.
+- The message that asks the synth for a patch is not known. Reading from the synth waits for a capture.

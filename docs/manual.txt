@@ -1,5 +1,5 @@
 # Intro
-UltraNova Controller sends and receives the MIDI messages (CC and NRPN) of the Novation UltraNova, so you can control the synth from your DAW, automate it, and see its settings change in the plugin. It is an early build: the window is the full design with live pages, and some controls (the Librarian page, the Animate page, the slot editor at the top left of the Modulation page) are still pictures.
+UltraNova Controller sends and receives the MIDI messages (CC and NRPN) of the Novation UltraNova, so you can control the synth from your DAW, automate it, and see its settings change in the plugin. It is an early build: the window is the full design with live pages, and some controls (the Animate page, the slot editor at the top left of the Modulation page) are still pictures. The Librarian page works on files only: it never talks to the synth yet.
 
 # Quick start
 - On the Novation UltraNova, turn on MIDI CC receive and transmit (and NRPN where the device has the option).
@@ -11,7 +11,7 @@ UltraNova Controller sends and receives the MIDI messages (CC and NRPN) of the N
 # Honest status
 - The map has 483 entries (CC and NRPN). It was written from the maker's documentation, nothing was invented.
 - None of the 483 controls has been tested on the real device. Every control is marked "not tested on hardware yet" in the list. A range that the documentation does not print is assumed to be 0 to 127 and is marked that way.
-- No SysEx and no patch librarian yet. Nothing is sent that is not in the map.
+- The Librarian page keeps patch banks (.syx files) on your computer. It cannot yet read patches from the UltraNova or send them to it: the message that asks the synth for a patch is not in any document we have, so those buttons are dimmed and say why. Nothing is sent that is not in the map.
 - Incoming messages from the device are consumed by the plugin and never echoed back. At most 16 values are sent per audio block so the device is not flooded.
 
 # Pages and live displays
@@ -23,6 +23,15 @@ UltraNova Controller sends and receives the MIDI messages (CC and NRPN) of the N
 - Oscillators also have drop-down lists for start phase, fixed note and noise type.
 - Lists whose order the maker's document does not print (drive types, routing, modes) use an assumed order, stated in the tooltip, until checked on a real UltraNova.
 - Values show as plain controller numbers (centred ones as minus 64 to plus 63) because the document gives no real units.
+
+# Librarian (files only)
+- Your patch banks are ordinary .syx files in a library folder (default: Studio 87/UltraNova Controller/library in your user data folder; right-click the tree, Choose library folder, to change it). Every change is saved to the file at once. Undo and Redo (Ctrl+Z, Ctrl+Y) step through the edits of the open bank.
+- Tree on the left: folders and banks. Click a bank to open it; the list shows up to 128 patches with name, category, genre and a favourite star. The search box filters by name, category or genre.
+- Double-click a patch to rename it (16 characters). Right-click a patch: category, genre, favourite, move up or down, remove from the bank, export as .syx. Right-click the tree: new folder, new bank, import a .syx file, rename, move to the trash, export a bank, backup the whole library, restore from a backup, show the folder.
+- Drop .syx files on the list: onto an open bank they are added to it, otherwise each file becomes a new bank in the selected folder. Files that are not UltraNova patch dumps are skipped and the message line says how many.
+- Category, genre and favourites are stored in a small .meta file next to each bank; they follow the patch even if you reorder the bank in another program. The patch bytes themselves are never read or changed except the name and, when a bank is exported, the slot number.
+- Backup copies the library folder to a new folder named UltraNova-library-<date>. Restore never deletes or overwrites: a file that differs is added as "<name> (restored)".
+- Not available yet: Grab, Reset (Init), audition, send to the synth and reading the synth's own banks. They need the synth's SysEx request message, which waits for a capture of the Novation Librarian.
 
 # Window
 - Resize by dragging any edge or corner; the shape stays the same, and the window opens at the size you left it. Hover a control for its address (CC or NRPN number).

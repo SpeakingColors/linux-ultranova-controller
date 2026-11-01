@@ -12,6 +12,7 @@
 #include <vector>
 #include "BinaryData.h"
 #include <catui/CatLookAndFeel.h>
+#include "LibraryView.h"
 
 namespace unova
 {
@@ -84,7 +85,7 @@ struct ButtonSpec { juce::String text, label; juce::Rectangle<float> rect; };
 struct MatrixRowSpec { int slot = 1; bool sel = false; juce::Colour bg; juce::Rectangle<float> c[5]; };
 struct PageData
 {
-    juce::Image art; std::vector<KnobSpec> knobs; std::vector<NavSpec> nav; std::vector<ButtonSpec> buttons; std::vector<TextRun> runs; std::vector<DialSpec> dials; std::vector<IconSpec> icons; std::vector<juce::Rectangle<float>> navBars, faders, bars; juce::Rectangle<float> env; std::vector<FilterDialSpec> filterDials; std::vector<juce::Rectangle<float>> lfoWins, routeTiles; std::vector<MatrixRowSpec> matrixRows;
+    juce::Image art; std::vector<KnobSpec> knobs; std::vector<NavSpec> nav; std::vector<ButtonSpec> buttons; std::vector<TextRun> runs; std::vector<DialSpec> dials; std::vector<IconSpec> icons; std::vector<juce::Rectangle<float>> navBars, faders, bars; juce::Rectangle<float> env; std::vector<FilterDialSpec> filterDials; std::vector<juce::Rectangle<float>> lfoWins, routeTiles; std::vector<MatrixRowSpec> matrixRows; std::map<juce::String, juce::Rectangle<float>> lib;   // lib: the live parts of the Librarian page (toolbar, search, tree, list)
     static std::unique_ptr<PageData> load(const juce::String& key)
     {
         auto pd = std::make_unique<PageData>(); auto png = resource(key + ".png"); auto js = resource(key + ".json");
@@ -111,6 +112,7 @@ struct PageData
         if (auto* fs = v["filterDials"].getArray()) for (auto& d : *fs) pd->filterDials.push_back({ rectOf(d), col(d["ring"].toString()), col(d["color"].toString()) });
         list("lfoWins", pd->lfoWins); list("routeTiles", pd->routeTiles);
         if (auto* mr = v["matrixRows"].getArray()) for (auto& r : *mr) { MatrixRowSpec m; m.slot = (int) r["slot"]; m.sel = (bool) r["sel"]; for (int i = 0; i < 5; ++i) m.c[i] = rectOf(r["c"][i]); pd->matrixRows.push_back(m); }
+        if (auto* lo = v["lib"].getDynamicObject()) for (auto& kv : lo->getProperties()) pd->lib[kv.name.toString()] = rectOf(kv.value);
         return pd;
     }
 };
@@ -761,12 +763,13 @@ class Content : public juce::Component, private juce::Timer
 {
 public:
     std::function<void()> onZoom, onInfo, onAll, onReset100;
+    std::function<juce::File()> getLibraryRoot; std::function<void(const juce::File&)> setLibraryRoot;   // where the Librarian keeps its banks (saved with the plugin state)
     Content(juce::AudioProcessor& p) : proc(p) { setSize(kW, kH); setOpaque(true); startTimerHz(20); }
-    ~Content() override { stopTimer(); knobs.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); filterDials.clear(); dropdowns.clear(); lfoViews.clear(); routeView.reset(); matrixView.reset(); fxView.reset(); bitSwitches.clear(); }
+    ~Content() override { stopTimer(); knobs.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); filterDials.clear(); dropdowns.clear(); lfoViews.clear(); routeView.reset(); matrixView.reset(); fxView.reset(); bitSwitches.clear(); libView.reset(); }
 
     void showPage(const juce::String& key)
     {
-        knobs.clear(); dials.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); filterDials.clear(); dropdowns.clear(); lfoViews.clear(); routeView.reset(); matrixView.reset(); fxView.reset(); bitSwitches.clear(); live.clear(); skip.clear(); shown.clear(); picker.reset(); page = key; data = PageData::load(key); const auto& ids = knobMap().at(key);
+        knobs.clear(); dials.clear(); fields.clear(); faders.clear(); bars.clear(); envGraph.reset(); filterDials.clear(); dropdowns.clear(); lfoViews.clear(); routeView.reset(); matrixView.reset(); fxView.reset(); bitSwitches.clear(); libView.reset(); live.clear(); skip.clear(); shown.clear(); picker.reset(); page = key; data = PageData::load(key); const auto& ids = knobMap().at(key);
         for (size_t i = 0; i < data->knobs.size(); ++i)
         {
             juce::RangedAudioParameter* prm = nullptr;
@@ -780,7 +783,14 @@ public:
             juce::RangedAudioParameter* prm = nullptr; for (auto* q : proc.getParameters()) if (auto* r = dynamic_cast<juce::RangedAudioParameter*>(q)) if (r->paramID == waveIds[i]) { prm = r; break; }
             auto d = std::make_unique<WaveDial>(prm, data->dials[i].color); static const char* pwIds[3] = { "cc_21", "cc_31", "cc_43" }; d->followShape(find(pwIds[i])); d->setBounds(data->dials[i].rect.toNearestInt()); d->onOpen = [this](WaveDial& wd) { openPicker(wd); }; addAndMakeVisible(*d); dials.push_back(std::move(d));
         }
-        bindLive(key); repaint();
+        bindLive(key); if (key == "lib") openLibrary(); repaint();
+    }
+    void openLibrary()
+    {
+        const juce::File root = getLibraryRoot ? getLibraryRoot() : defaultLibraryRoot();
+        libView = std::make_unique<LibraryView>(data->lib, root, [](float px) { return makeFont(400, false, px); });
+        libView->onRootChanged = [this](const juce::File& f) { if (setLibraryRoot) setLibraryRoot(f); };
+        libView->setBounds(0, 0, kW, kH); addAndMakeVisible(*libView);
     }
     juce::RangedAudioParameter* find(const juce::String& id) const
     { for (auto* q : proc.getParameters()) if (auto* r = dynamic_cast<juce::RangedAudioParameter*>(q)) if (r->paramID == id) return r; return nullptr; }
@@ -975,13 +985,14 @@ public:
     }
 private:
     juce::AudioProcessor& proc; KnobLook look; juce::String page; std::unique_ptr<PageData> data; std::vector<std::unique_ptr<Knob>> knobs; std::vector<std::unique_ptr<WaveDial>> dials; std::unique_ptr<WavePicker> picker;
-    std::vector<std::unique_ptr<Field>> fields; std::vector<std::unique_ptr<Fader>> faders; std::vector<std::unique_ptr<Bar>> bars; std::unique_ptr<EnvGraph> envGraph; std::vector<std::unique_ptr<FilterDial>> filterDials; std::vector<std::unique_ptr<Dropdown>> dropdowns; std::vector<std::unique_ptr<LfoWindow>> lfoViews; std::unique_ptr<RouteTiles> routeView; std::unique_ptr<MatrixRows> matrixView; std::unique_ptr<FxEditor> fxView; int fxSel = 0; std::vector<std::unique_ptr<BitSwitch>> bitSwitches; std::map<int, std::function<juce::String()>> live; std::set<int> skip; std::map<int, juce::String> shown; juce::String iconSig;
+    std::vector<std::unique_ptr<Field>> fields; std::vector<std::unique_ptr<Fader>> faders; std::vector<std::unique_ptr<Bar>> bars; std::unique_ptr<EnvGraph> envGraph; std::vector<std::unique_ptr<FilterDial>> filterDials; std::vector<std::unique_ptr<Dropdown>> dropdowns; std::vector<std::unique_ptr<LfoWindow>> lfoViews; std::unique_ptr<RouteTiles> routeView; std::unique_ptr<MatrixRows> matrixView; std::unique_ptr<FxEditor> fxView; int fxSel = 0; std::vector<std::unique_ptr<BitSwitch>> bitSwitches; std::unique_ptr<LibraryView> libView; std::map<int, std::function<juce::String()>> live; std::set<int> skip; std::map<int, juce::String> shown; juce::String iconSig;
 };
 
 class Editor : public juce::AudioProcessorEditor
 {
 public:
     std::function<void()> openAllParameters;
+    std::function<juce::File()> getLibraryRoot; std::function<void(const juce::File&)> setLibraryRoot;
     std::function<void(int)> onWidth;   // told the window width whenever the user resizes (the plugin keeps it in its saved state)
     explicit Editor(juce::AudioProcessor& p) : AudioProcessorEditor(p), content(p)
     {
@@ -992,6 +1003,7 @@ public:
         content.onInfo = [this] { juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::InfoIcon, "UltraNova Controller",
             "Free and open source by Studio 87. Controls the Novation UltraNova over MIDI (CC and NRPN from the maker's list). It collects nothing and uses no network. "
             "Knobs drawn dim have no controller in the maker's list yet. The gear button opens the list of all parameters. Support: ko-fi.com/studio87"); };
+        content.getLibraryRoot = [this] { return getLibraryRoot ? getLibraryRoot() : defaultLibraryRoot(); }; content.setLibraryRoot = [this](const juce::File& f) { if (setLibraryRoot) setLibraryRoot(f); };
         const char* pg = std::getenv("UNOVA_PAGE"); content.showPage(pg ? pg : "osc");
         constrainer.setFixedAspectRatio((double) kW / kH); constrainer.setSizeLimits(674, 380, 2696, 1520); setConstrainer(&constrainer);
         border = std::make_unique<juce::ResizableBorderComponent>(this, &constrainer); border->setBorderThickness(juce::BorderSize<int>(10)); addAndMakeVisible(*border);
@@ -1004,6 +1016,7 @@ public:
         if (border) { border->setBounds(getLocalBounds()); border->toFront(false); }
         if (onWidth && getWidth() > 0) onWidth(getWidth());
     }
+    void showPage(const juce::String& key) { content.showPage(key); }   // the plugin calls this after it has set the hooks above, so a page that needs them (Librarian) sees the saved settings
     void restoreWidth(int w) { if (w < 674) return; w = juce::jmin(w, 2696); setSize(w, (int) std::lround(w * (double) kH / kW)); }
 private:
     void cycleZoom()
