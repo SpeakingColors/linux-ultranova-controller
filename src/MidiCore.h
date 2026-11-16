@@ -131,6 +131,16 @@ inline int setBits(int byteValue, int lo, int width, int v)
 // Touch and solo controls: the unit sends 0 or 127, and treats 0..63 as off, 64..127 as on.
 inline bool isOn(int v) { return v >= 64; }
 
+// Input channel filter: 0 follows the sending channel, 1 to 16 reads only that channel. Anything else follows the sending channel.
+inline bool channelAccepted(int filter, int msgChannel, int sendChannel) { return (filter < 1 || filter > 16 ? sendChannel : filter) == msgChannel; }
+
+// Saved state values: reads a whole integer or reports failure, so a damaged or foreign value is skipped instead of becoming 0.
+inline bool stateInt(const std::string& s, int lo, int hi, int& out)
+{
+    int v = 0; if (!toInt(s, v)) return false;
+    out = std::clamp(v, lo, hi); return true;
+}
+
 struct Event { int paramIndex = -1; int value = 0; };
 
 // Turns incoming CC messages from the device into parameter events.

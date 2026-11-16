@@ -2,6 +2,12 @@
 
 Source tag for every CC and NRPN number on this page: official: Novation "UltraNova Program Parameter MIDI Assignments" (MIDI controller list, NRPN list and notes), file `ultranova-midi-implementation2.pdf`, published by Novation on its download server (14 pages). Checked again on 2026-11-15: every CC and NRPN number in `map/params.csv` is in that document, except CC 58 (see below). Value ranges and enum meanings are **not** in it, so the plugin treats those as "0 to 127 assumed" (UNVERIFIED). Nothing here has been tested on real hardware ("untested on hardware"). Novation's separate "Patch & Global spec" (packed byte details, SysEx) was not found; no SysEx request format is documented here.
 
+## Verification status
+
+- **documented**: the address and name are printed in the Novation document above. This is the status of every CC and NRPN row below and in `map/params.csv`.
+- **captured**: seen in a capture from the owner's device. Nothing in this repository is captured yet except the patch dump layout at the end of this file.
+- **untested**: not tried on real hardware. Every row of the map is untested (`hw` is 0 for all 483 entries in `map/params.csv`), and value ranges are assumed 0 to 127 unless `range_src` says `manual`.
+
 ## Source quirks
 
 - CC 57 is printed twice: "Noise Type" and "Pre-FX Level". CC 58 is absent and CC 59 is "Post-FX Level". The plugin uses CC 58 for Pre-FX Level as a guess; that number is UNVERIFIED and untested on hardware. The plugin labels the control that way.
@@ -182,9 +188,10 @@ Mod matrix slot layout: five consecutive NRPNs per slot: Source1, Source2, Touch
 
 ## How the plugin backend uses these rules
 
-- MIDI channel setting (1 to 16, default 1): outgoing messages use it. Incoming controller messages are only read on that channel; everything else passes through.
+- Channels: sending uses the "MIDI channel" parameter (1 to 16, default 1). Receiving uses "MIDI input channel": 0 (default) follows the sending channel, 1 to 16 reads only that channel (`channelAccepted` in src/MidiCore.h). Accepted incoming CC is consumed and never echoed back; CC on other channels and all other messages pass through unchanged.
 - Restoring a saved project sets the values without sending MIDI.
-
+- Parameter IDs are the `id` column of `map/params.csv` and must not be renamed, because saved projects and host automation refer to them. `midi_channel` and `midi_in_channel` are plain, non-automatable parameters; the global (audio setup) group is not automatable and is not sent by "Send all".
+- Saved state: an XML element `STATE` with `v="1"`, the two channels, window width, library folder and one attribute per parameter ID. Loading skips unknown, missing or non-numeric values, clamps numbers to the parameter's range, ignores a newer `v` and never sends MIDI (`stateInt` in src/MidiCore.h).
 - Sending: NRPN is always CC 99, CC 98, CC 6 (the MSB is sent also for 0). ClockBPM (2:63) is CC 99, 98, 6 (data MSB), 38 (data LSB).
 - Receiving: nrpnMSB starts at 0 and returns to 0 after every CC 6, so CC 98 + CC 6 alone addresses 0:xxx. A 14 bit value is applied when CC 38 arrives; a second CC 38 is ignored.
 - Packed bytes (LFO, Gator, Vocoder, Arpeggiator) are exposed as whole bytes. Only the bit positions printed above are known; the other bits are not, so a UI must change its own field and keep the rest (helpers `getBits` / `setBits` in src/MidiCore.h).

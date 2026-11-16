@@ -28,6 +28,11 @@ static void basics()
     // packed bits
     CHECK(getBits(0b10110, 1, 2) == 0b11); CHECK(setBits(0b10110, 1, 2, 0) == 0b10000); CHECK(setBits(0, 4, 1, 1) == 16); CHECK(setBits(127, 5, 2, 0) == 31); CHECK(setBits(0, 0, 7, 255) == 127);
     CHECK(!isOn(63) && isOn(64) && isOn(127) && !isOn(0));
+    // input channel filter: 0 follows the sending channel, 1..16 reads only that one, anything else follows the sending channel
+    CHECK(channelAccepted(0, 5, 5) && !channelAccepted(0, 6, 5) && channelAccepted(7, 7, 5) && !channelAccepted(7, 5, 5) && channelAccepted(17, 3, 3) && !channelAccepted(-1, 4, 3));
+    // saved state values: whole integers only, clamped, junk skipped
+    int o = -7; CHECK(stateInt("12", 1, 16, o) && o == 12); CHECK(stateInt("99", 1, 16, o) && o == 16); CHECK(stateInt("-3", 0, 16, o) && o == 0);
+    o = 5; CHECK(!stateInt("", 0, 16, o) && !stateInt("abc", 0, 16, o) && !stateInt("1x", 0, 16, o) && !stateInt("-", 0, 16, o) && !stateInt("12345678", 0, 16, o) && o == 5);
 }
 
 static void parsing()

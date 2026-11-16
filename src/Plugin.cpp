@@ -36,6 +36,10 @@ public:
             Slot s; s.param = ip.get(); s.map = int(&p - mapRes.params.data()); slots.push_back(s);
             addParameter(ip.release());
         }
+        // Added after the map parameters so no existing parameter moves. 0 = same channel as sending (the default).
+        auto inCh = std::make_unique<juce::AudioParameterInt>(juce::ParameterID{ "midi_in_channel", 1 }, "MIDI input channel (0 = same as send)", 0, 16, 0,
+                                                              juce::AudioParameterIntAttributes().withAutomatable(false));
+        inChannelParam = inCh.get(); addParameter(inCh.release());
         pending = std::make_unique<std::atomic<int>[]>(slots.size()); lastRecv = std::make_unique<std::atomic<int>[]>(slots.size()); incoming = std::make_unique<std::atomic<int>[]>(slots.size());
         for (size_t i = 0; i < slots.size(); ++i) { pending[i] = -1; lastRecv[i] = -1; incoming[i] = -1; slots[i].param->addListener(this); }
         startTimerHz(30);
@@ -45,7 +49,8 @@ public:
     const ctl::ParseResult mapRes;
     struct Slot { juce::AudioParameterInt* param = nullptr; int map = 0; };
     std::vector<Slot> slots;
-    juce::AudioParameterInt* channelParam = nullptr;
+    juce::AudioParameterInt* channelParam = nullptr;      // channel used for sending
+    juce::AudioParameterInt* inChannelParam = nullptr;    // channel read when receiving, 0 = same as sending
 
     // Pushes the plugin's values to the device. Global / audio setup values are left out on purpose.
     void sendAll() { for (size_t i = 0; i < slots.size(); ++i) if (!mapRes.params[size_t(slots[i].map)].isGlobal()) pending[i] = slots[i].param->get(); }
@@ -59,12 +64,12 @@ public:
         juce::ScopedNoDenormals nd; audio.clear();
         // 1. incoming from the device: CC messages are consumed here, everything else passes through unchanged
         // only the selected MIDI channel is read; controllers on other channels pass through unchanged
-        const int inCh = channelParam->get();
+        const int sendCh = channelParam->get();
         juce::MidiBuffer passthru;
         for (const auto meta : midi)
         {
             const auto msg = meta.getMessage();
-            if (msg.isController() && msg.getChannel() == inCh)
+            if (msg.isController() && ctl::channelAccepted(inChannelParam->get(), msg.getChannel(), sendCh))
             {
                 if (auto e = decoder.feedCC(msg.getControllerNumber(), msg.getControllerValue()))
                     for (size_t i = 0; i < slots.size(); ++i) if (slots[i].map == e->paramIndex) { incoming[i] = e->value; break; }
@@ -95,23 +100,34 @@ public:
 
     void getStateInformation(juce::MemoryBlock& dest) override
     {
-        juce::XmlElement x("STATE"); x.setAttribute("v", 1); x.setAttribute("midi_channel", channelParam->get()); if (editorWidth > 0) x.setAttribute("editor_w", editorWidth); if (libraryRoot.isNotEmpty()) x.setAttribute("lib_root", libraryRoot);
+        juce::XmlElement x("STATE"); x.setAttribute("v", 1); x.setAttribute("midi_channel", channelParam->get()); x.setAttribute("midi_in_channel", inChannelParam->get());
+        if (editorWidth > 0) x.setAttribute("editor_w", editorWidth); if (libraryRoot.isNotEmpty()) x.setAttribute("lib_root", libraryRoot);
         for (auto& s : slots) x.setAttribute(s.param->paramID, s.param->get());
         copyXmlToBinary(x, dest);
     }
+    // Tolerant on purpose: unknown attributes, a newer "v", missing or non-numeric values are skipped, and nothing here sends MIDI.
     void setStateInformation(const void* data, int size) override
     {
+        if (data == nullptr || size <= 0) return;
         if (auto x = getXmlFromBinary(data, size))
         {
             if (!x->hasTagName("STATE")) return;
-            editorWidth = x->getIntAttribute("editor_w", 0); libraryRoot = x->getStringAttribute("lib_root"); const int ch = x->getIntAttribute("midi_channel", 1); *channelParam = juce::jlimit(1, 16, ch);
-            for (auto& s : slots) if (x->hasAttribute(s.param->paramID)) setFromState(s, x->getIntAttribute(s.param->paramID));
+            int v = 0;
+            if (readInt(*x, "editor_w", 0, 20000, v)) editorWidth = v;
+            libraryRoot = x->getStringAttribute("lib_root");
+            if (readInt(*x, "midi_channel", 1, 16, v)) *channelParam = v;
+            if (readInt(*x, "midi_in_channel", 0, 16, v)) *inChannelParam = v;
+            for (auto& s : slots) if (readInt(*x, s.param->paramID, s.param->getRange().getStart(), s.param->getRange().getEnd(), v)) setFromState(s, v);
         }
     }
 
     juce::String libraryRoot;   // folder of the Librarian page; empty means the default (Studio 87/UltraNova Controller/library in the user data folder)
     int editorWidth = 0;   // window width the user last chose, kept in the saved state so the window opens the same size next time
 private:
+    static bool readInt(const juce::XmlElement& x, const juce::String& name, int lo, int hi, int& out)
+    {
+        return x.hasAttribute(name) && ctl::stateInt(x.getStringAttribute(name).trim().toStdString(), lo, hi, out);
+    }
     void setFromState(Slot& s, int v)
     {
         const size_t i = size_t(&s - slots.data()); const auto r = s.param->getRange();
