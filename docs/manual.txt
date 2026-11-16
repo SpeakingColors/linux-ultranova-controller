@@ -11,7 +11,7 @@ UltraNova Controller sends and receives the MIDI messages (CC and NRPN) of the N
 # Honest status
 - The map has 483 entries (CC and NRPN). It was written from the maker's documentation, nothing was invented.
 - None of the 483 controls has been tested on the real device. Every control is marked "not tested on hardware yet" in the list. A range that the documentation does not print is assumed to be 0 to 127 and is marked that way.
-- The Librarian page keeps patch banks (.syx files) on your computer. It cannot yet read patches from the UltraNova or send them to it: the message that asks the synth for a patch is not in any document we have, so those buttons are dimmed and say why. Nothing is sent that is not in the map.
+- The Librarian page keeps patch banks (.syx files) on your computer. It cannot yet read patches from the UltraNova or send them to it: the message that asks the synth for a patch is not in any document we have, so those buttons are dimmed and say why. Only messages listed in the map are sent.
 - Incoming messages from the device are consumed by the plugin and never echoed back. At most 16 values are sent per audio block so the device is not flooded.
 
 # Pages and live displays
@@ -35,4 +35,4 @@ UltraNova Controller sends and receives the MIDI messages (CC and NRPN) of the N
 
 # Window
 - Resize by dragging any edge or corner; the shape stays the same, and the window opens at the size you left it. Hover a control for its address (CC or NRPN number).
-- Free and open source. The plugin collects no data and never touches the network.
+- Free and open source.

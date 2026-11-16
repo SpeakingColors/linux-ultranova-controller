@@ -1001,7 +1001,7 @@ public:
         content.onZoom = [this] { cycleZoom(); }; content.onReset100 = [this] { setSize(kDefaultW, kH); };
         content.onAll = [this] { if (openAllParameters) openAllParameters(); };
         content.onInfo = [this] { juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::InfoIcon, "UltraNova Controller",
-            "Free and open source by Studio 87. Controls the Novation UltraNova over MIDI (CC and NRPN from the maker's list). It collects nothing and uses no network. "
+            "Free and open source by Studio 87. Controls the Novation UltraNova over MIDI (CC and NRPN from the maker's list). "
             "Knobs drawn dim have no controller in the maker's list yet. The gear button opens the list of all parameters. Support: ko-fi.com/studio87"); };
         content.getLibraryRoot = [this] { return getLibraryRoot ? getLibraryRoot() : defaultLibraryRoot(); }; content.setLibraryRoot = [this](const juce::File& f) { if (setLibraryRoot) setLibraryRoot(f); };
         const char* pg = std::getenv("UNOVA_PAGE"); content.showPage(pg ? pg : "osc");

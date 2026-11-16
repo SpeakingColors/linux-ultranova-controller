@@ -107,7 +107,7 @@ public:
     juce::String getTooltip() override
     {
         const auto p = hover;
-        if (at("grab").contains(p)) return "Grab needs the message that asks the UltraNova for a patch. It is not in any document we have, so it waits for a capture of the Novation Librarian (see the roadmap). Nothing is sent to the device from this page.";
+        if (at("grab").contains(p)) return "Grab needs the message that asks the UltraNova for a patch. It is not in any document we have, so it waits for a capture of the Novation Librarian (see the roadmap). This page does not send MIDI to the device.";
         if (at("reset").contains(p)) return "Reset (Init) needs the bytes of an init patch, which we do not have. Waiting for the capture.";
         if (at("prev").contains(p) || at("next").contains(p)) return "Moves the selection in the list (ArrowUp and ArrowDown work too).";
         if (at("newfolder").contains(p)) return "Makes a folder inside the selected folder of your library.";
