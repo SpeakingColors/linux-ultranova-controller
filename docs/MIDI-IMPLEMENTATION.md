@@ -1,10 +1,10 @@
 # UltraNova: MIDI implementation
 
-Source: Novation "UltraNova Program Parameter MIDI Assignments" (MIDI controller list and NRPN list), file `ultranova-midi-implementation2.pdf` in our project files. Everything here is from that document. Value ranges and enum meanings are **not** in it.
+Source tag for every CC and NRPN number on this page: official: Novation "UltraNova Program Parameter MIDI Assignments" (MIDI controller list, NRPN list and notes), file `ultranova-midi-implementation2.pdf`, published by Novation on its download server (14 pages). Checked again on 2026-11-15: every CC and NRPN number in `map/params.csv` is in that document, except CC 58 (see below). Value ranges and enum meanings are **not** in it, so the plugin treats those as "0 to 127 assumed" (UNVERIFIED). Nothing here has been tested on real hardware ("untested on hardware"). Novation's separate "Patch & Global spec" (packed byte details, SysEx) was not found; no SysEx request format is documented here.
 
 ## Source quirks
 
-- CC 57 is printed twice: "Noise Type" and "Pre-FX Level". CC 58 is absent and CC 59 is "Post-FX Level". Most likely Pre-FX Level is 58 **(check on hardware)**.
+- CC 57 is printed twice: "Noise Type" and "Pre-FX Level". CC 58 is absent and CC 59 is "Post-FX Level". The plugin uses CC 58 for Pre-FX Level as a guess; that number is UNVERIFIED and untested on hardware. The plugin labels the control that way.
 - CC 11 is listed as expression. CC 118 and 119 are free.
 - Typos in the source: "Outut" (Distort2 Output Level), "Sustain Rate" naming repeats per envelope.
 
@@ -14,7 +14,7 @@ Source: Novation "UltraNova Program Parameter MIDI Assignments" (MIDI controller
 - High resolution (Tweak Data, ClockBPM 2:63): send/receive four messages in order NRPN MSB, NRPN LSB, data MSB, data LSB. The 14-bit value applies when the data LSB arrives; later LSBs are ignored.
 - Packed parameters: 0:122 (up to 64 1-bit values), 0:123 (32 2-bit), 0:124 (16 3-bit), 0:125 (8 4-bit), 0:126 (4 5-bit), 0:127 (2 6-bit). They set bit-fields without knowing the other fields. The "Patch & Global spec" packed byte details are in a separate Novation document we do not have.
 - Touch and solo controls: the unit sends 0 = off, 127 = on; it receives 0 to 63 = off, 64 to 127 = on.
-- Global/Audio setup is NRPN MSB 64 (Memory Protect must be off for edits, per our notes).
+- Global/Audio setup is NRPN MSB 64 (the official document lists a "Protect" item at 64:0 but does not say what it blocks).
 
 ## CC map
 
@@ -181,6 +181,9 @@ Mod matrix slot layout: five consecutive NRPNs per slot: Source1, Source2, Touch
 4. Behaviour of NRPN reads: whether the unit answers requests, or only transmits on panel edits, is not stated.
 
 ## How the plugin backend uses these rules
+
+- MIDI channel setting (1 to 16, default 1): outgoing messages use it. Incoming controller messages are only read on that channel; everything else passes through.
+- Restoring a saved project sets the values without sending MIDI.
 
 - Sending: NRPN is always CC 99, CC 98, CC 6 (the MSB is sent also for 0). ClockBPM (2:63) is CC 99, 98, 6 (data MSB), 38 (data LSB).
 - Receiving: nrpnMSB starts at 0 and returns to 0 after every CC 6, so CC 98 + CC 6 alone addresses 0:xxx. A 14 bit value is applied when CC 38 arrives; a second CC 38 is ignored.

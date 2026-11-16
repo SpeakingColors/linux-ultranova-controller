@@ -58,11 +58,13 @@ public:
     {
         juce::ScopedNoDenormals nd; audio.clear();
         // 1. incoming from the device: CC messages are consumed here, everything else passes through unchanged
+        // only the selected MIDI channel is read; controllers on other channels pass through unchanged
+        const int inCh = channelParam->get();
         juce::MidiBuffer passthru;
         for (const auto meta : midi)
         {
             const auto msg = meta.getMessage();
-            if (msg.isController())
+            if (msg.isController() && msg.getChannel() == inCh)
             {
                 if (auto e = decoder.feedCC(msg.getControllerNumber(), msg.getControllerValue()))
                     for (size_t i = 0; i < slots.size(); ++i) if (slots[i].map == e->paramIndex) { incoming[i] = e->value; break; }

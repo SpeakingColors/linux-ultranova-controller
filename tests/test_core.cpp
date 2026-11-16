@@ -223,6 +223,8 @@ int main(int argc, char** argv)
         std::ifstream f(argv[1]); std::stringstream ss; ss << f.rdbuf(); auto real = parseMap(ss.str());
         for (auto& er : real.errors) std::printf("map error: %s\n", er.c_str());
         CHECK(real.errors.empty()); CHECK(real.params.size() > 400);
+        // CC 58 is not in Novation's list (the list prints CC 57 twice); it must stay labelled UNVERIFIED
+        for (auto& p : real.params) if (p.kind == Kind::CC && p.a == 58) CHECK(p.name.find("UNVERIFIED") != std::string::npos);
         map_tests(real.params); sim_roundtrip(real.params); outbox_tests(real.params); fuzz(real.params);
         int hw = 0; for (auto& p : real.params) hw += p.hwVerified; std::printf("verified on hardware: %d of %zu\n", hw, real.params.size());
     }
