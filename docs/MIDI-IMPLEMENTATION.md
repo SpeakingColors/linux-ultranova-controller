@@ -10,7 +10,7 @@ Source tag for every CC and NRPN number on this page: official: Novation "UltraN
 
 ## Source quirks
 
-- CC 57 is printed twice: "Noise Type" and "Pre-FX Level". CC 58 is absent and CC 59 is "Post-FX Level". The plugin uses CC 58 for Pre-FX Level as a guess; that number is UNVERIFIED and untested on hardware. The plugin labels the control that way.
+- CC 57 is printed twice: "Noise Type" and "Pre-FX Level". CC 58 is absent and CC 59 is "Post-FX Level". Re-read in the official PDF on 2026-11-19: the duplicate is in the document itself. CC 58 is a guess, so the plugin no longer maps it: the Pre-FX Level knob is drawn disabled and nothing is sent for it until the number is captured from a real UltraNova.
 - CC 11 is listed as expression. CC 118 and 119 are free.
 - Typos in the source: "Outut" (Distort2 Output Level), "Sustain Rate" naming repeats per envelope.
 

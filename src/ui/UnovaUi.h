@@ -38,7 +38,7 @@ inline const std::map<juce::String, std::vector<juce::String>>& knobMap()
                    "cc_31", "cc_30", "cc_34", "cc_33", "cc_39", "cc_36", "cc_35",          // Oscillator 2
                    "cc_43", "cc_42", "cc_45", "cc_44", "cc_49", "cc_47", "cc_46",          // Oscillator 3
                    "cc_16", "cc_76", "cc_77",                                              // common: drift, vibrato rate, vibrato depth
-                   "cc_58", "cc_59",                                                            // effects send (Pre-FX level, CC number unclear in the source), output (Post-FX level)
+                   "", "cc_59",                                                              // effects send (Pre-FX level: Novation prints CC 57 for it, the same as Noise Type, so it has no parameter), output (Post-FX level)
                    "cc_15", "cc_5",                                                        // unison detune, portamento time
                    "cc_108", "cc_111", "cc_114" } },                                       // amp envelope: velocity, repeat, level track
         { "filter", { "cc_61",
